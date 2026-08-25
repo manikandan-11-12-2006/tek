@@ -1,11 +1,17 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 
 export default function ConfirmDialog({ isOpen, title, message, confirmText = "Delete", cancelText = "Cancel", onConfirm, onCancel }) {
-  // Prevent body scroll when open
+  const [userInputCode, setUserInputCode] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+
+  // Prevent body scroll when open and generate verification code
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
+      const randomCode = Math.floor(1000 + Math.random() * 9000).toString();
+      setVerificationCode(randomCode);
+      setUserInputCode('');
     } else {
       document.body.style.overflow = 'unset';
     }
@@ -36,8 +42,28 @@ export default function ConfirmDialog({ isOpen, title, message, confirmText = "D
         </div>
         
         {/* Content */}
-        <div className="px-6 py-4">
+        <div className="px-6 py-4 space-y-4">
           <p className="text-sm leading-relaxed text-slate-600">{message}</p>
+          
+          {/* Verification Code Box */}
+          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-lg flex flex-col gap-2">
+            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+              Type the code below to confirm this action:
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-black text-slate-800 bg-slate-200/80 border border-slate-300/40 px-3 py-1.5 rounded select-all font-mono tracking-widest">
+                {verificationCode}
+              </span>
+              <input
+                type="text"
+                maxLength={4}
+                placeholder="Enter code"
+                value={userInputCode}
+                onChange={(e) => setUserInputCode(e.target.value.replace(/\D/g, ''))}
+                className="flex-1 text-center font-mono font-black text-sm tracking-widest border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-white"
+              />
+            </div>
+          </div>
         </div>
         
         {/* Actions */}
@@ -52,7 +78,12 @@ export default function ConfirmDialog({ isOpen, title, message, confirmText = "D
           <button
             type="button"
             onClick={onConfirm}
-            className="px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm transition-colors cursor-pointer"
+            disabled={userInputCode !== verificationCode}
+            className={`px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm transition-colors ${
+              userInputCode !== verificationCode 
+                ? 'opacity-35 cursor-not-allowed bg-red-500 hover:bg-red-500' 
+                : 'cursor-pointer'
+            }`}
           >
             {confirmText}
           </button>
