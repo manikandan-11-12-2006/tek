@@ -11,6 +11,7 @@ import Dashboard from './pages/Dashboard';
 import NewChallan from './pages/NewChallan';
 import Challans from './pages/Challans';
 import ChallanDetails from './pages/ChallanDetails';
+import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 
 // Utilities
@@ -152,6 +153,10 @@ export default function App() {
                   triggerPdfDownload={triggerPdfDownload}
                 />
               } 
+            />
+            <Route 
+              path="/reports" 
+              element={<Reports />} 
             />
             <Route 
               path="/settings" 

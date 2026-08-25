@@ -144,14 +144,21 @@ export const downloadChallanPDF = async (challan, companyDetails) => {
   // Right Metadata Box
   pdf.roundedRect(108, 52, 92, 32, 2, 2, 'S');
   pdf.setFont("helvetica", "bold");
-  pdf.text("DC No.:", 112, 62);
+  pdf.text("DC No.:", 112, 60);
   pdf.setFont("helvetica", "normal");
-  pdf.text(challan.challanNumber, 127, 62);
+  pdf.text(challan.challanNumber, 127, 60);
   
   pdf.setFont("helvetica", "bold");
-  pdf.text("Date :", 112, 72);
+  pdf.text("Date :", 112, 68);
   pdf.setFont("helvetica", "normal");
-  pdf.text(formatDate(challan.date), 125, 72);
+  pdf.text(formatDate(challan.date), 125, 68);
+
+  if (challan.vehicleNumber) {
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Vehicle No:", 112, 76);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(challan.vehicleNumber, 131, 76);
+  }
 
   // 4. Product Entry Table & Pagination Logic
   const tableX = 10;
@@ -229,13 +236,20 @@ export const downloadChallanPDF = async (challan, companyDetails) => {
 
       pdf.roundedRect(108, 52, 92, 32, 2, 2, 'S');
       pdf.setFont("helvetica", "bold");
-      pdf.text("DC No.:", 112, 62);
+      pdf.text("DC No.:", 112, 60);
       pdf.setFont("helvetica", "normal");
-      pdf.text(challan.challanNumber, 127, 62);
+      pdf.text(challan.challanNumber, 127, 60);
       pdf.setFont("helvetica", "bold");
-      pdf.text("Date :", 112, 72);
+      pdf.text("Date :", 112, 68);
       pdf.setFont("helvetica", "normal");
-      pdf.text(formatDate(challan.date), 125, 72);
+      pdf.text(formatDate(challan.date), 125, 68);
+      
+      if (challan.vehicleNumber) {
+        pdf.setFont("helvetica", "bold");
+        pdf.text("Vehicle No:", 112, 76);
+        pdf.setFont("helvetica", "normal");
+        pdf.text(challan.vehicleNumber, 131, 76);
+      }
     }
 
     const isLastPage = (pageNum === totalPages);
@@ -278,7 +292,10 @@ export const downloadChallanPDF = async (challan, companyDetails) => {
          pdf.text(String(currentProdIdx + 1), (tableX + colX.sno) / 2, textY, { align: 'center' });
          const truncatedName = prod.name.length > 52 ? prod.name.substring(0, 49) + "..." : prod.name;
          pdf.text(truncatedName, colX.sno + 3, textY);
-         if(prod.quantity) pdf.text(String(prod.quantity), (colX.products + colX.qty) / 2, textY, { align: 'center' });
+         if(prod.quantity) {
+           const qtyText = prod.unit ? `${prod.quantity} ${prod.unit}` : String(prod.quantity);
+           pdf.text(qtyText, (colX.products + colX.qty) / 2, textY, { align: 'center' });
+         }
          if(prod.rate !== undefined && prod.rate !== '') pdf.text(parseFloat(prod.rate).toFixed(2), colX.rate - 2, textY, { align: 'right' });
          if(prod.amount !== undefined && prod.amount !== '') pdf.text(parseFloat(prod.amount).toFixed(2), 198, textY, { align: 'right' });
       }

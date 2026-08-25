@@ -99,7 +99,7 @@ export default function ChallanPreview({ challan, companyDetails }) {
                 </div>
 
                 {/* Challan Metadata Box */}
-                <div className="border border-slate-900 rounded-xl p-3 min-h-[110px] flex flex-col justify-center space-y-3.5">
+                <div className="border border-slate-900 rounded-xl p-3 min-h-[110px] flex flex-col justify-center space-y-2">
                   <div>
                     <span className="text-[11px] font-extrabold text-slate-800">DC No.: </span>
                     <span className="text-xs font-bold text-slate-950">{challan.challanNumber}</span>
@@ -108,6 +108,12 @@ export default function ChallanPreview({ challan, companyDetails }) {
                     <span className="text-[11px] font-extrabold text-slate-800">Date : </span>
                     <span className="text-xs font-bold text-slate-950">{formatDate(challan.date)}</span>
                   </div>
+                  {challan.vehicleNumber && (
+                    <div>
+                      <span className="text-[11px] font-extrabold text-slate-800">Vehicle No: </span>
+                      <span className="text-xs font-bold text-slate-950">{challan.vehicleNumber}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -139,7 +145,7 @@ export default function ChallanPreview({ challan, companyDetails }) {
                             {prod.name}
                           </td>
                           <td className={`py-1 px-2 border-r border-slate-900 text-right font-mono text-slate-900 ${!isPlaceholder ? 'border-b border-slate-900' : ''}`}>
-                            {!isPlaceholder ? prod.quantity : ''}
+                            {!isPlaceholder ? `${prod.quantity} ${prod.unit || ''}` : ''}
                           </td>
                           <td className={`py-1 px-2 border-r border-slate-900 text-right font-mono text-slate-900 ${!isPlaceholder ? 'border-b border-slate-900' : ''}`}>
                             {!isPlaceholder ? parseFloat(prod.rate).toFixed(2) : ''}

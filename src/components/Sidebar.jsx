@@ -7,7 +7,8 @@ import {
   Settings as SettingsIcon, 
   LogOut, 
   X,
-  Zap
+  Zap,
+  BarChart
 } from 'lucide-react';
 
 export default function Sidebar({ isOpen, onClose, companyName = "TEKPOWER ENERGY SOLUTIONS" }) {
@@ -15,6 +16,7 @@ export default function Sidebar({ isOpen, onClose, companyName = "TEKPOWER ENERG
     { to: '/', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/new', label: 'New Challan', icon: PlusCircle },
     { to: '/challans', label: 'All Challans', icon: FileText },
+    { to: '/reports', label: 'Reports', icon: BarChart },
     { to: '/settings', label: 'Settings', icon: SettingsIcon },
   ];
 

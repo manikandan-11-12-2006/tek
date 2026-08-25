@@ -19,9 +19,10 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
   const [customer, setCustomer] = useState('');
   const [challanNumber, setChallanNumber] = useState('');
   const [date, setDate] = useState('');
+  const [vehicleNumber, setVehicleNumber] = useState('');
   const [remarks, setRemarks] = useState('');
   const [products, setProducts] = useState([
-    { name: '', quantity: '', rate: '', amount: 0 }
+    { name: '', quantity: '', unit: 'nos', rate: '', amount: 0 }
   ]);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState(false);
@@ -32,8 +33,14 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
       setCustomer(initialData.customer || '');
       setChallanNumber(initialData.challanNumber || '');
       setDate(initialData.date || '');
+      setVehicleNumber(initialData.vehicleNumber || '');
       setRemarks(initialData.remarks || '');
-      setProducts(initialData.products || [{ name: '', quantity: '', rate: '', amount: 0 }]);
+      
+      const loadedProducts = (initialData.products || [{ name: '', quantity: '', rate: '', amount: 0 }]).map(p => ({
+        ...p,
+        unit: p.unit || 'nos'
+      }));
+      setProducts(loadedProducts);
     } else {
       // Create mode
       setChallanNumber(generateNextChallanNumber());
@@ -68,7 +75,7 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
 
   // Add new product row
   const addProductRow = () => {
-    setProducts([...products, { name: '', quantity: '', rate: '', amount: 0 }]);
+    setProducts([...products, { name: '', quantity: '', unit: 'nos', rate: '', amount: 0 }]);
   };
 
   // Delete product row
@@ -76,8 +83,8 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
     const updated = products.filter((_, i) => i !== index);
     // Keep at least one row
     if (updated.length === 0) {
-      setProducts([{ name: '', quantity: '', rate: '', amount: 0 }]);
-      if (touched) validateForm([{ name: '', quantity: '', rate: '', amount: 0 }], customer, challanNumber, date);
+      setProducts([{ name: '', quantity: '', unit: 'nos', rate: '', amount: 0 }]);
+      if (touched) validateForm([{ name: '', quantity: '', unit: 'nos', rate: '', amount: 0 }], customer, challanNumber, date);
     } else {
       setProducts(updated);
       if (touched) validateForm(updated, customer, challanNumber, date);
@@ -158,6 +165,7 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
         serialNumber: idx + 1,
         name: p.name.trim(),
         quantity: parseFloat(p.quantity),
+        unit: p.unit || 'nos',
         rate: parseFloat(p.rate),
         amount: parseFloat(p.amount)
       }));
@@ -166,6 +174,7 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
       customer: customer.trim(),
       challanNumber: challanNumber.trim(),
       date,
+      vehicleNumber: vehicleNumber.trim(),
       remarks: remarks.trim(),
       products: cleanedProducts,
       totalQuantity,
@@ -267,6 +276,20 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
                   <p className="text-xs font-bold text-red-600 mt-0.5">{errors.date}</p>
                 )}
               </div>
+
+              <div className="space-y-1">
+                <label htmlFor="vehicleNumber" className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                  Vehicle No
+                </label>
+                <input
+                  id="vehicleNumber"
+                  type="text"
+                  placeholder="e.g. TN 38 AA 1234"
+                  value={vehicleNumber}
+                  onChange={(e) => setVehicleNumber(e.target.value)}
+                  className="w-full text-sm font-bold px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white"
+                />
+              </div>
             </div>
           </div>
 
@@ -330,19 +353,30 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
 
                           {/* Quantity Input */}
                           <td className="py-2.5 px-4 text-right">
-                            <input
-                              type="number"
-                              min="1"
-                              step="any"
-                              placeholder="0"
-                              value={prod.quantity}
-                              onChange={(e) => handleProductChange(index, 'quantity', e.target.value)}
-                              className={`w-20 text-right text-sm font-medium px-3 py-1.5 bg-slate-50 border ${
-                                rowError.quantity ? 'border-red-500 bg-red-50/20' : 'border-slate-200'
-                              } rounded-lg font-mono`}
-                            />
+                            <div className="flex items-center justify-end gap-1">
+                              <input
+                                type="number"
+                                min="1"
+                                step="any"
+                                placeholder="0"
+                                value={prod.quantity}
+                                onChange={(e) => handleProductChange(index, 'quantity', e.target.value)}
+                                className={`w-16 text-right text-sm font-medium px-2 py-1.5 bg-slate-50 border ${
+                                  rowError.quantity ? 'border-red-500 bg-red-50/20' : 'border-slate-200'
+                                } rounded-lg font-mono`}
+                              />
+                              <select
+                                value={prod.unit}
+                                onChange={(e) => handleProductChange(index, 'unit', e.target.value)}
+                                className="text-xs font-medium px-1 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-600 outline-none"
+                              >
+                                <option value="nos">nos</option>
+                                <option value="pcs">pcs</option>
+                                <option value="kgs">kgs</option>
+                              </select>
+                            </div>
                             {rowError.quantity && (
-                              <p className="text-[10px] font-bold text-red-600 mt-0.5">{rowError.quantity}</p>
+                              <p className="text-[10px] font-bold text-red-600 mt-0.5 text-right">{rowError.quantity}</p>
                             )}
                           </td>
 
