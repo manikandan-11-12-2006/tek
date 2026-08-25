@@ -40,6 +40,8 @@ export default function Dashboard({ triggerDirectPrint, triggerPdfDownload, isLo
   const currentMonthStr = new Date().toISOString().slice(0, 7); // YYYY-MM
   const thisMonthChallansCount = challans.filter(c => c.date && c.date.startsWith(currentMonthStr)).length;
 
+  const cancelledChallansCount = challans.filter(c => c.status === 'Cancelled').length;
+
   // Get last challan number
   const getLastChallanNumber = () => {
     if (challans.length === 0) return 'None';
@@ -124,7 +126,7 @@ export default function Dashboard({ triggerDirectPrint, triggerPdfDownload, isLo
       </div>
 
       {/* Stats Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
         <StatCard 
           title="Total Challans" 
           value={totalChallansCount} 
@@ -152,6 +154,13 @@ export default function Dashboard({ triggerDirectPrint, triggerPdfDownload, isLo
           icon={Hash} 
           description="Highest index generated"
           colorClass="border-emerald-100 bg-emerald-50/20"
+        />
+        <StatCard 
+          title="Cancelled" 
+          value={cancelledChallansCount} 
+          icon={Ban} 
+          description="Total voided challans"
+          colorClass="border-rose-100 bg-rose-50/20"
         />
       </div>
 

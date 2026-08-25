@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getChallans } from '../utils/storage';
 import { formatCurrency } from '../utils/calculations';
-import { BarChart, Calendar as CalendarIcon, Hash, IndianRupee, Package, Printer, Download, Eye } from 'lucide-react';
+import { BarChart, Calendar as CalendarIcon, Hash, IndianRupee, Package, Printer, Download, Eye, Ban } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import html2canvas from 'html2canvas-pro';
@@ -25,8 +25,9 @@ export default function Reports() {
   const serialFrom = totalChallans > 0 ? sortedChallans[0].challanNumber : 'N/A';
   const serialTo = totalChallans > 0 ? sortedChallans[totalChallans - 1].challanNumber : 'N/A';
 
-  const totalAmount = sortedChallans.reduce((sum, c) => sum + (c.totalAmount || 0), 0);
-  const totalItems = sortedChallans.reduce((sum, c) => sum + (c.totalQuantity || 0), 0);
+  const totalAmount = sortedChallans.reduce((sum, c) => sum + (c.status === 'Cancelled' ? 0 : (c.totalAmount || 0)), 0);
+  const totalItems = sortedChallans.reduce((sum, c) => sum + (c.status === 'Cancelled' ? 0 : (c.totalQuantity || 0)), 0);
+  const cancelledCount = sortedChallans.filter(c => c.status === 'Cancelled').length;
 
   const displayMonth = selectedMonth ? new Date(selectedMonth + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '';
 
@@ -103,7 +104,7 @@ export default function Reports() {
           </h2>
         </div>
         
-        <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
           {/* Total Delivery Challans */}
           <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm flex flex-col gap-3 print:border-slate-400">
             <div className="flex items-center gap-3">
@@ -113,6 +114,17 @@ export default function Reports() {
               <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Challans</p>
             </div>
             <h3 className="text-3xl font-black text-slate-800">{totalChallans}</h3>
+          </div>
+
+          {/* Cancelled Challans */}
+          <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm flex flex-col gap-3 print:border-slate-400">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-rose-50 text-rose-700 rounded-lg shrink-0 print:bg-transparent print:border print:border-slate-300">
+                <Ban size={20} />
+              </div>
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Cancelled</p>
+            </div>
+            <h3 className="text-3xl font-black text-slate-800">{cancelledCount}</h3>
           </div>
 
           {/* Total Amount (Revenue) */}
