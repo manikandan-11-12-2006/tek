@@ -1,19 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Trash2, Plus, ArrowLeft, Save, Printer } from 'lucide-react';
 import { formatCurrency, calculateRowAmount, calculateTotals } from '../utils/calculations';
-import { generateNextChallanNumber } from '../utils/storage';
-
-const PRODUCT_SUGGESTIONS = [
-  "Control Panel",
-  "Capacitor Bank",
-  "APFC Panel",
-  "MCC Panel",
-  "Electrical Components",
-  "Spare Parts Kit",
-  "AMF Panel",
-  "Changeover Switch Panel",
-  "Energy Meter Panel"
-];
+import { 
+  generateNextChallanNumber, 
+  getChallans,
+  getProductSuggestions,
+  addProductSuggestion,
+  getCustomerSuggestions,
+  addCustomerSuggestion
+} from '../utils/storage';
 
 export default function ChallanForm({ initialData, onSave, onCancel }) {
   const [customer, setCustomer] = useState('');
@@ -26,9 +21,27 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
   ]);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+  const [customerList, setCustomerList] = useState([]);
+  const [custSearch, setCustSearch] = useState('');
+  const [showCustDropdown, setShowCustDropdown] = useState(false);
+
+  // Handle click outside to close customer search dropdown
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (!e.target.closest('.customer-search-container')) {
+        setShowCustDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
 
   // Initialize form with initialData or default values
   useEffect(() => {
+    setSuggestions(getProductSuggestions());
+    setCustomerList(getCustomerSuggestions());
+    
     if (initialData) {
       setCustomer(initialData.customer || '');
       setChallanNumber(initialData.challanNumber || '');
@@ -50,6 +63,11 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
 
   // Update totals dynamically
   const { totalQuantity, totalAmount } = calculateTotals(products);
+
+  // Filter saved customers for search autocomplete dropdown
+  const filteredCustomers = customerList.filter(cust => 
+    cust.toLowerCase().includes(custSearch.toLowerCase())
+  );
 
   // Handle product row change
   const handleProductChange = (index, field, value) => {
@@ -92,25 +110,38 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
   };
 
   // Form Validation
-  const validateForm = (prodList = products, cust = customer, dcNo = challanNumber, dt = date) => {
+  const validateForm = (prodList = products, cust = customer, dcNo = challanNumber, dt = date, forceShowEmpty = touched) => {
     const tempErrors = {};
 
-    if (!cust.trim()) {
+    if (!cust.trim() && forceShowEmpty) {
       tempErrors.customer = 'Receiver (Customer) details are required';
     }
+    
     if (!dcNo.trim()) {
-      tempErrors.challanNumber = 'Challan number is required';
+      if (forceShowEmpty) {
+        tempErrors.challanNumber = 'Challan number is required';
+      }
+    } else {
+      // Check for duplicate in localStorage (exclude current challan in Edit mode)
+      const isDuplicate = getChallans().some(c => 
+        c.challanNumber.toLowerCase().trim() === dcNo.toLowerCase().trim() && 
+        (!initialData || c.id !== initialData.id)
+      );
+      if (isDuplicate) {
+        tempErrors.challanNumber = 'DC number already exists';
+      }
     }
-    if (!dt) {
+
+    if (!dt && forceShowEmpty) {
       tempErrors.date = 'Date is required';
     }
 
     // Filter out rows that are entirely empty before validating
     const nonEmptyRows = prodList.filter(p => p.name.trim() || p.quantity || p.rate);
     
-    if (nonEmptyRows.length === 0) {
+    if (nonEmptyRows.length === 0 && forceShowEmpty) {
       tempErrors.products = 'At least one product item is required';
-    } else {
+    } else if (nonEmptyRows.length > 0) {
       const productErrors = [];
       prodList.forEach((prod, idx) => {
         const rowErrors = {};
@@ -151,7 +182,7 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
     e.preventDefault();
     setTouched(true);
     
-    const isValid = validateForm();
+    const isValid = validateForm(products, customer, challanNumber, date, true);
     if (!isValid) {
       // Find first error and scroll to it
       alert("Please fix the validation errors in the form before saving.");
@@ -169,6 +200,16 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
         rate: parseFloat(p.rate),
         amount: parseFloat(p.amount)
       }));
+
+    // Save newly entered product names to suggestions database
+    cleanedProducts.forEach(p => {
+      addProductSuggestion(p.name);
+    });
+
+    // Save newly entered customer details to suggestions database
+    if (customer.trim()) {
+      addCustomerSuggestion(customer);
+    }
 
     const finalChallan = {
       customer: customer.trim(),
@@ -211,9 +252,61 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Customer address */}
             <div className="lg:col-span-2 space-y-1">
-              <label htmlFor="customer" className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                To (Customer Details) <span className="text-red-500">*</span>
-              </label>
+              <div className="flex justify-between items-center mb-1">
+                <label htmlFor="customer" className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                  To (Customer Details) <span className="text-red-500">*</span>
+                </label>
+                {customerList.length > 0 && (
+                  <div className="relative customer-search-container">
+                    <input
+                      type="text"
+                      placeholder="🔍 Search saved customer..."
+                      value={custSearch}
+                      onFocus={() => setShowCustDropdown(true)}
+                      onChange={(e) => {
+                        setCustSearch(e.target.value);
+                        setShowCustDropdown(true);
+                      }}
+                      className="text-[11px] bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded px-2.5 py-1 text-slate-700 font-bold transition-all outline-none focus:bg-white focus:border-blue-500 w-44 lg:w-52 cursor-text"
+                    />
+                    
+                    {showCustDropdown && (
+                      <div className="absolute right-0 mt-1 z-50 w-72 bg-white border border-slate-200 rounded-lg shadow-xl max-h-60 overflow-y-auto font-sans text-xs">
+                        {filteredCustomers.length === 0 ? (
+                          <div className="p-3 text-slate-400 italic text-center">
+                            No matching customers found
+                          </div>
+                        ) : (
+                          <div className="p-1">
+                            {filteredCustomers.map((cust, idx) => {
+                              const lines = cust.split('\n');
+                              const companyName = lines[0] || cust;
+                              const subtext = lines.slice(1).join(', ').substring(0, 50) + (lines.length > 1 ? '...' : '');
+                              
+                              return (
+                                <button
+                                  key={idx}
+                                  type="button"
+                                  onClick={() => {
+                                    setCustomer(cust);
+                                    validateForm(products, cust, challanNumber, date);
+                                    setCustSearch('');
+                                    setShowCustDropdown(false);
+                                  }}
+                                  className="w-full text-left px-3 py-2 hover:bg-slate-50 rounded-md transition-colors flex flex-col gap-0.5 cursor-pointer border-b border-slate-50 last:border-none"
+                                >
+                                  <span className="font-extrabold text-slate-800 truncate">{companyName}</span>
+                                  {subtext && <span className="text-[10px] text-slate-400 font-medium truncate">{subtext}</span>}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
               <textarea
                 id="customer"
                 rows="4"
@@ -244,8 +337,9 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
                   placeholder="TEK-XXXX"
                   value={challanNumber}
                   onChange={(e) => {
-                    setChallanNumber(e.target.value);
-                    if (touched) validateForm(products, customer, e.target.value, date);
+                    const val = e.target.value;
+                    setChallanNumber(val);
+                    validateForm(products, customer, val, date);
                   }}
                   className={`w-full text-sm font-bold px-4 py-2.5 bg-slate-50 border ${
                     errors.challanNumber ? 'border-red-500 bg-red-50/20' : 'border-slate-200'
@@ -342,7 +436,7 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
                               } rounded-lg`}
                             />
                             <datalist id={`suggestions-${index}`}>
-                              {PRODUCT_SUGGESTIONS.map((item, key) => (
+                              {suggestions.map((item, key) => (
                                 <option key={key} value={item} />
                               ))}
                             </datalist>

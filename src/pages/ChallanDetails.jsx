@@ -7,25 +7,31 @@ import {
   Copy, 
   Trash2, 
   ArrowLeft,
-  Loader
+  Loader2,
+  Ban,
+  RotateCcw
 } from 'lucide-react';
-import { getChallanById, deleteChallan, duplicateChallan } from '../utils/storage';
+import { getChallanById, deleteChallan, duplicateChallan, updateChallan } from '../utils/storage';
 import ChallanPreview from '../components/ChallanPreview';
 import ConfirmDialog from '../components/ConfirmDialog';
 
-export default function ChallanDetails({ companyDetails, triggerDirectPrint, triggerPdfDownload }) {
+export default function ChallanDetails({ companyDetails, triggerDirectPrint, triggerPdfDownload, isLoggedIn }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [challan, setChallan] = useState(null);
   const [loading, setLoading] = useState(true);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
 
   useEffect(() => {
     setLoading(true);
+    console.log("Fetching challan with ID:", id);
     const data = getChallanById(id);
+    console.log("Fetched data:", data);
     if (data) {
       setChallan(data);
     } else {
+      console.warn("Challan not found in storage!");
       alert("Challan not found!");
       navigate('/challans');
     }
@@ -52,10 +58,25 @@ export default function ChallanDetails({ companyDetails, triggerDirectPrint, tri
     }
   };
 
+  const handleCancel = () => {
+    const updated = updateChallan(challan.id, { status: 'Cancelled' });
+    if (updated) {
+      setChallan(updated);
+      setCancelOpen(false);
+    }
+  };
+
+  const handleReactivate = () => {
+    const updated = updateChallan(challan.id, { status: 'Active' });
+    if (updated) {
+      setChallan(updated);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-96 bg-white border rounded-xl">
-        <Loader className="animate-spin text-blue-700" size={32} />
+        <Loader2 className="animate-spin text-blue-700" size={32} />
         <span className="text-sm font-semibold text-slate-500 mt-2">Loading document preview...</span>
       </div>
     );
@@ -82,6 +103,15 @@ export default function ChallanDetails({ companyDetails, triggerDirectPrint, tri
               <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-800 font-bold border border-blue-100 font-mono">
                 {challan.date ? challan.date.split('-').reverse().join('/') : ''}
               </span>
+              {challan.status === 'Cancelled' ? (
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-800 font-bold border border-rose-100">
+                  Cancelled
+                </span>
+              ) : (
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 font-bold border border-emerald-100">
+                  Active
+                </span>
+              )}
             </h1>
             <p className="text-xs font-semibold text-slate-500">Document detailed preview and output operations</p>
           </div>
@@ -92,6 +122,8 @@ export default function ChallanDetails({ companyDetails, triggerDirectPrint, tri
           <button
             onClick={() => navigate(`/edit/${challan.id}`)}
             className="flex items-center gap-1.5 px-3.5 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+            disabled={!isLoggedIn || challan.status === 'Cancelled'}
+            style={{ opacity: (!isLoggedIn || challan.status === 'Cancelled') ? 0.35 : 1, cursor: (!isLoggedIn || challan.status === 'Cancelled') ? 'not-allowed' : 'pointer' }}
           >
             <Edit size={14} />
             Edit
@@ -100,14 +132,40 @@ export default function ChallanDetails({ companyDetails, triggerDirectPrint, tri
           <button
             onClick={handleDuplicate}
             className="flex items-center gap-1.5 px-3.5 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+            disabled={!isLoggedIn}
+            style={{ opacity: !isLoggedIn ? 0.35 : 1, cursor: !isLoggedIn ? 'not-allowed' : 'pointer' }}
           >
             <Copy size={14} />
             Duplicate
           </button>
 
+          {challan.status === 'Cancelled' ? (
+            <button
+              onClick={handleReactivate}
+              className="flex items-center gap-1.5 px-3.5 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+              disabled={!isLoggedIn}
+              style={{ opacity: !isLoggedIn ? 0.35 : 1, cursor: !isLoggedIn ? 'not-allowed' : 'pointer' }}
+            >
+              <RotateCcw size={14} />
+              Reactivate
+            </button>
+          ) : (
+            <button
+              onClick={() => setCancelOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2 border border-red-200 hover:bg-red-50 text-red-600 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+              disabled={!isLoggedIn}
+              style={{ opacity: !isLoggedIn ? 0.35 : 1, cursor: !isLoggedIn ? 'not-allowed' : 'pointer' }}
+            >
+              <Ban size={14} />
+              Cancel Challan
+            </button>
+          )}
+
           <button
             onClick={() => setDeleteOpen(true)}
             className="flex items-center gap-1.5 px-3.5 py-2 border border-red-200 hover:bg-red-50 text-red-600 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+            disabled={!isLoggedIn}
+            style={{ opacity: !isLoggedIn ? 0.35 : 1, cursor: !isLoggedIn ? 'not-allowed' : 'pointer' }}
           >
             <Trash2 size={14} />
             Delete
@@ -147,6 +205,17 @@ export default function ChallanDetails({ companyDetails, triggerDirectPrint, tri
         message={`Are you sure you want to delete ${challan.challanNumber}? This action cannot be undone and will permanently remove this record.`}
         onConfirm={handleDelete}
         onCancel={() => setDeleteOpen(false)}
+      />
+
+      {/* Cancel Confirmation Modal */}
+      <ConfirmDialog 
+        isOpen={cancelOpen}
+        title="Cancel Delivery Challan?"
+        message={`Are you sure you want to cancel ${challan.challanNumber}? This will mark it as CANCELLED on the document and PDF exports.`}
+        confirmText="Cancel Challan"
+        cancelText="Back"
+        onConfirm={handleCancel}
+        onCancel={() => setCancelOpen(false)}
       />
     </div>
   );

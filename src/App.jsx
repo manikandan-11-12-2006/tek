@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, FileSpreadsheet, Loader } from 'lucide-react';
+import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
+import { Menu, FileSpreadsheet, Loader2 } from 'lucide-react';
 
 // Components
 import Sidebar from './components/Sidebar';
@@ -13,6 +13,7 @@ import Challans from './pages/Challans';
 import ChallanDetails from './pages/ChallanDetails';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+import Login from './pages/Login';
 
 // Utilities
 import { 
@@ -22,12 +23,20 @@ import {
   getChallans
 } from './utils/storage';
 import { downloadChallanPDF } from './utils/pdfGenerator';
+import { checkLogin, logout } from './utils/auth';
+
+// Route Guard component
+function RequireAuth({ children, redirectTo, isLoggedIn }) {
+  const location = useLocation();
+  return isLoggedIn ? children : <Navigate to={redirectTo} replace state={{ from: location }} />;
+}
 
 export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [companyDetails, setCompanyDetails] = useState(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(checkLogin());
   
   // Printing states
   const [printingChallan, setPrintingChallan] = useState(null);
@@ -89,6 +98,16 @@ export default function App() {
     }
   };
 
+  const handleLoginSuccess = () => {
+    setIsLoggedIn(true);
+  };
+
+  const handleLogout = () => {
+    logout();
+    setIsLoggedIn(false);
+    navigate('/');
+  };
+
   return (
     <div className="flex print:block h-screen print:h-auto print:overflow-visible overflow-hidden bg-slate-50 print:bg-white text-slate-800 font-sans">
       {/* 1. Sidebar Component (drawer on mobile, sticky sidebar on desktop) */}
@@ -96,6 +115,8 @@ export default function App() {
         isOpen={sidebarOpen} 
         onClose={() => setSidebarOpen(false)} 
         companyName={companyDetails?.companyName}
+        isLoggedIn={isLoggedIn}
+        onLogout={handleLogout}
       />
 
       {/* 2. Main Content Frame */}
@@ -126,16 +147,25 @@ export default function App() {
                 <Dashboard 
                   triggerDirectPrint={triggerDirectPrint} 
                   triggerPdfDownload={triggerPdfDownload} 
+                  isLoggedIn={isLoggedIn}
                 />
               } 
             />
             <Route 
               path="/new" 
-              element={<NewChallan onSave={handleSaveChallan} />} 
+              element={
+                <RequireAuth redirectTo="/login" isLoggedIn={isLoggedIn}>
+                  <NewChallan onSave={handleSaveChallan} />
+                </RequireAuth>
+              } 
             />
             <Route 
               path="/edit/:id" 
-              element={<NewChallan onSave={handleSaveChallan} />} 
+              element={
+                <RequireAuth redirectTo="/login" isLoggedIn={isLoggedIn}>
+                  <NewChallan onSave={handleSaveChallan} />
+                </RequireAuth>
+              } 
             />
             <Route 
               path="/challans" 
@@ -143,6 +173,7 @@ export default function App() {
                 <Challans 
                   triggerDirectPrint={triggerDirectPrint} 
                   triggerPdfDownload={triggerPdfDownload} 
+                  isLoggedIn={isLoggedIn}
                 />
               } 
             />
@@ -153,6 +184,7 @@ export default function App() {
                   companyDetails={companyDetails}
                   triggerDirectPrint={triggerDirectPrint}
                   triggerPdfDownload={triggerPdfDownload}
+                  isLoggedIn={isLoggedIn}
                 />
               } 
             />
@@ -162,7 +194,15 @@ export default function App() {
             />
             <Route 
               path="/settings" 
-              element={<Settings onUpdateDetails={(details) => setCompanyDetails(details)} />} 
+              element={
+                <RequireAuth redirectTo="/login" isLoggedIn={isLoggedIn}>
+                  <Settings onUpdateDetails={(details) => setCompanyDetails(details)} />
+                </RequireAuth>
+              } 
+            />
+            <Route 
+              path="/login" 
+              element={<Login onLoginSuccess={handleLoginSuccess} />} 
             />
           </Routes>
         </main>
@@ -179,7 +219,7 @@ export default function App() {
       {isPdfProcessing && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-sm">
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-2xl flex flex-col items-center gap-3">
-            <Loader className="animate-spin text-blue-700" size={28} />
+            <Loader2 className="animate-spin text-blue-700" size={28} />
             <div className="text-sm font-bold text-slate-800">Generating PDF...</div>
             <div className="text-xs text-slate-500 font-medium">Please wait while we render the challan.</div>
           </div>

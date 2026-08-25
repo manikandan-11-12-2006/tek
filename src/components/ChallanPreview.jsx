@@ -14,7 +14,7 @@ export default function ChallanPreview({ challan, companyDetails }) {
   }
 
   // Calculate totals
-  const { totalQuantity, totalAmount } = calculateTotals(challan.products);
+  const { totalQuantity, totalAmount } = calculateTotals(challan.products || []);
 
   // Paginate exactly 20 rows per page
   const ROWS_PER_PAGE = 20;
@@ -52,6 +52,14 @@ export default function ChallanPreview({ challan, companyDetails }) {
             className="challan-a4-preview flex flex-col justify-between text-black relative select-none print:m-0 print:shadow-none shadow-2xl overflow-hidden bg-white"
             style={{ pageBreakAfter: isLastPage ? 'auto' : 'always' }}
           >
+            {/* Cancelled Watermark Stamp */}
+            {challan.status === 'Cancelled' && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10 select-none overflow-hidden">
+                <div className="border-[8px] border-red-600/30 rounded-2xl px-12 py-4 text-red-600/30 text-7xl font-black tracking-widest uppercase transform -rotate-12 border-double">
+                  Cancelled
+                </div>
+              </div>
+            )}
             <div>
               {/* 1. Header */}
               <div className="flex justify-between items-start">
@@ -185,7 +193,7 @@ export default function ChallanPreview({ challan, companyDetails }) {
                   <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider pt-2 block">
                     Remarks / Description:
                   </span>
-                  <div className="w-full bg-transparent border-none text-xs text-slate-800 p-0 py-1 whitespace-pre-wrap">
+                  <div className="w-full bg-transparent border-none text-xs text-slate-900 font-bold p-0 py-1 whitespace-pre-wrap">
                     {challan.remarks || ""}
                   </div>
                 </div>

@@ -2,6 +2,94 @@ import { sampleChallans, defaultCompanyDetails } from '../data/sampleData';
 
 const CHALLANS_KEY = 'tekpower_challans';
 const COMPANY_KEY = 'tekpower_company_details';
+const SUGGESTIONS_KEY = 'tekpower_product_suggestions';
+const CUSTOMERS_KEY = 'tekpower_saved_customers';
+
+/**
+ * Retrieves the saved customer address profiles, seeding initial samples if empty.
+ * @returns {Array} List of customer profiles (address strings)
+ */
+export const getCustomerSuggestions = () => {
+  try {
+    const data = localStorage.getItem(CUSTOMERS_KEY);
+    if (!data) {
+      const defaults = [
+        "LARSEN & TOUBRO LIMITED\nGate No. 3, Powai Campus,\nSaki Vihar Road, Mumbai - 400072\nGSTIN: 27AAACL1234H1Z1\nMobile No: 9876543210",
+        "SIEMENS LTD\nThane Belapur Road,\nKalwa, Thane - 400601\nGSTIN: 27AAACS5678B2Z2\nMobile No: 8765432109"
+      ];
+      localStorage.setItem(CUSTOMERS_KEY, JSON.stringify(defaults));
+      return defaults;
+    }
+    return JSON.parse(data) || [];
+  } catch (error) {
+    console.error("Error reading customer suggestions:", error);
+    return [];
+  }
+};
+
+/**
+ * Saves a new customer address profile if it does not already exist.
+ * @param {string} customerDetails 
+ */
+export const addCustomerSuggestion = (customerDetails) => {
+  if (!customerDetails || !customerDetails.trim()) return;
+  const customers = getCustomerSuggestions();
+  const trimmed = customerDetails.trim();
+  const normalizedNew = trimmed.toLowerCase().replace(/\s+/g, ' ');
+  
+  const exists = customers.some(item => 
+    item.toLowerCase().replace(/\s+/g, ' ') === normalizedNew
+  );
+  
+  if (!exists) {
+    customers.push(trimmed);
+    localStorage.setItem(CUSTOMERS_KEY, JSON.stringify(customers));
+  }
+};
+
+/**
+ * Retrieves the product suggestions from localStorage, seeding default values if not present.
+ * @returns {Array} List of product name suggestions
+ */
+export const getProductSuggestions = () => {
+  try {
+    const data = localStorage.getItem(SUGGESTIONS_KEY);
+    if (!data) {
+      const defaults = [
+        "Control Panel",
+        "Capacitor Bank",
+        "APFC Panel",
+        "MCC Panel",
+        "Electrical Components",
+        "Spare Parts Kit",
+        "AMF Panel",
+        "Changeover Switch Panel",
+        "Energy Meter Panel"
+      ];
+      localStorage.setItem(SUGGESTIONS_KEY, JSON.stringify(defaults));
+      return defaults;
+    }
+    return JSON.parse(data) || [];
+  } catch (error) {
+    console.error("Error reading suggestions:", error);
+    return [];
+  }
+};
+
+/**
+ * Adds a new product suggestion if it doesn't already exist.
+ * @param {string} name 
+ */
+export const addProductSuggestion = (name) => {
+  if (!name || !name.trim()) return;
+  const suggestions = getProductSuggestions();
+  const trimmedName = name.trim();
+  const exists = suggestions.some(item => item.toLowerCase() === trimmedName.toLowerCase());
+  if (!exists) {
+    suggestions.push(trimmedName);
+    localStorage.setItem(SUGGESTIONS_KEY, JSON.stringify(suggestions));
+  }
+};
 
 /**
  * Initialize storage with default data if empty.
@@ -13,6 +101,8 @@ export const initStorage = () => {
   if (!localStorage.getItem(COMPANY_KEY)) {
     localStorage.setItem(COMPANY_KEY, JSON.stringify(defaultCompanyDetails));
   }
+  getProductSuggestions();
+  getCustomerSuggestions();
 };
 
 /**
@@ -54,22 +144,25 @@ export const getChallanById = (id) => {
  */
 export const generateNextChallanNumber = () => {
   const challans = getChallans();
-  let maxNum = 0;
   
+  const existingNums = new Set();
   challans.forEach(c => {
     if (c.challanNumber) {
-      // Look for TEK- followed by numbers
       const match = c.challanNumber.match(/TEK-(\d+)/i);
       if (match) {
         const num = parseInt(match[1], 10);
-        if (!isNaN(num) && num > maxNum) {
-          maxNum = num;
+        if (!isNaN(num)) {
+          existingNums.add(num);
         }
       }
     }
   });
   
-  const nextNum = maxNum + 1;
+  let nextNum = 1;
+  while (existingNums.has(nextNum)) {
+    nextNum++;
+  }
+  
   return `TEK-${String(nextNum).padStart(4, '0')}`;
 };
 

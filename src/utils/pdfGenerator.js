@@ -336,7 +336,7 @@ export const downloadChallanPDF = async (challan, companyDetails) => {
       pdf.setTextColor(100, 116, 139);
       pdf.text("REMARKS / DESCRIPTION:", 13, remarksY + 4);
       
-      pdf.setFont("helvetica", "normal");
+      pdf.setFont("helvetica", "bold");
       pdf.setFontSize(8);
       pdf.setTextColor(30, 41, 59);
       const remarksLines = pdf.splitTextToSize(challan.remarks || '', 184);
@@ -384,6 +384,26 @@ export const downloadChallanPDF = async (challan, companyDetails) => {
     pdf.setFontSize(8.2);
     pdf.setTextColor(255, 255, 255);
     pdf.text(details.footerTagline.toUpperCase(), 105, bannerY + 4.8, { align: 'center' });
+
+    // 8. Cancelled Watermark Stamp (drawn on every page if status is Cancelled)
+    if (challan.status === 'Cancelled') {
+      pdf.saveState();
+      pdf.setDrawColor(239, 68, 68);
+      pdf.setTextColor(239, 68, 68);
+      
+      // Draw double border stamp box
+      pdf.setLineWidth(2.5);
+      pdf.rotate(-15, 105, 148.5);
+      pdf.roundedRect(65, 137, 80, 22, 3, 3, 'S');
+      pdf.setLineWidth(0.8);
+      pdf.roundedRect(66.5, 138.5, 77, 19, 2, 2, 'S');
+      
+      // Draw text
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(30);
+      pdf.text("CANCELLED", 105, 151, { align: 'center' });
+      pdf.restoreState();
+    }
   }
 
   // Save the PDF file

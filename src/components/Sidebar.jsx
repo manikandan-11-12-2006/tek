@@ -1,17 +1,18 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   PlusCircle, 
   FileText, 
   Settings as SettingsIcon, 
   LogOut, 
+  LogIn,
   X,
   Zap,
   BarChart
 } from 'lucide-react';
 
-export default function Sidebar({ isOpen, onClose, companyName = "TEKPOWER ENERGY SOLUTIONS" }) {
+export default function Sidebar({ isOpen, onClose, companyName = "TEKPOWER ENERGY SOLUTIONS", isLoggedIn, onLogout }) {
   const links = [
     { to: '/', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/new', label: 'New Challan', icon: PlusCircle },
@@ -61,13 +62,35 @@ export default function Sidebar({ isOpen, onClose, companyName = "TEKPOWER ENERG
       </nav>
 
       {/* Footer Info */}
-      <div className="p-4 border-t border-[#334155] bg-[#0f172a]/40">
+      <div className="p-4 border-t border-[#334155] bg-[#0f172a]/40 space-y-3">
         <div className="px-3 py-2 rounded bg-[#334155]/30">
           <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Company</div>
           <div className="text-xs font-medium text-slate-200 truncate" title={companyName}>
             {companyName}
           </div>
         </div>
+        
+        {/* Auth Action */}
+        {isLoggedIn ? (
+          <div className="flex items-center justify-between px-3 py-2 text-xs text-slate-400 bg-slate-800/40 rounded border border-slate-700/30">
+            <span className="font-bold text-emerald-400">Admin</span>
+            <button 
+              onClick={onLogout}
+              className="font-bold text-red-400 hover:text-red-300 transition-colors flex items-center gap-1 cursor-pointer"
+            >
+              <LogOut size={12} />
+              Logout
+            </button>
+          </div>
+        ) : (
+          <Link 
+            to="/login"
+            className="flex items-center justify-center gap-1.5 w-full py-1.5 bg-blue-700 hover:bg-blue-600 text-white rounded text-xs font-bold transition-all"
+          >
+            <LogIn size={12} />
+            Admin Login
+          </Link>
+        )}
       </div>
     </div>
   );

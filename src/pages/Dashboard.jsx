@@ -10,18 +10,22 @@ import {
   Edit, 
   Printer, 
   Download, 
-  Trash2 
+  Trash2,
+  Ban,
+  RotateCcw
 } from 'lucide-react';
-import { getChallans, deleteChallan } from '../utils/storage';
+import { getChallans, deleteChallan, updateChallan } from '../utils/storage';
 import { formatCurrency } from '../utils/calculations';
 import StatCard from '../components/StatCard';
 import ConfirmDialog from '../components/ConfirmDialog';
 
-export default function Dashboard({ triggerDirectPrint, triggerPdfDownload }) {
+export default function Dashboard({ triggerDirectPrint, triggerPdfDownload, isLoggedIn }) {
   const navigate = useNavigate();
   const [challans, setChallans] = useState([]);
   const [deleteId, setDeleteId] = useState(null);
   const [deleteNo, setDeleteNo] = useState('');
+  const [cancelId, setCancelId] = useState(null);
+  const [cancelNo, setCancelNo] = useState('');
 
   useEffect(() => {
     setChallans(getChallans());
@@ -60,6 +64,25 @@ export default function Dashboard({ triggerDirectPrint, triggerPdfDownload }) {
       setDeleteId(null);
       setDeleteNo('');
     }
+  };
+
+  const handleOpenCancel = (id, challanNo) => {
+    setCancelId(id);
+    setCancelNo(challanNo);
+  };
+
+  const handleConfirmCancel = () => {
+    if (cancelId) {
+      updateChallan(cancelId, { status: 'Cancelled' });
+      setChallans(getChallans()); // reload
+      setCancelId(null);
+      setCancelNo('');
+    }
+  };
+
+  const handleReactivate = (id) => {
+    updateChallan(id, { status: 'Active' });
+    setChallans(getChallans()); // reload
   };
 
   // Trim customer text for table display
@@ -162,11 +185,12 @@ export default function Dashboard({ triggerDirectPrint, triggerPdfDownload }) {
             <table className="w-full text-left border-collapse min-w-[800px]">
               <thead>
                 <tr className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-500 border-b border-slate-100">
-                  <th className="py-3 px-6 w-[12%]">Challan No</th>
-                  <th className="py-3 px-6 w-[12%]">Date</th>
-                  <th className="py-3 px-6 w-[28%]">Customer / Receiver</th>
-                  <th className="py-3 px-6 w-[22%]">Products / Items</th>
-                  <th className="py-3 px-6 w-[14%] text-right">Total Amount</th>
+                  <th className="py-3 px-6 w-[11%]">Challan No</th>
+                  <th className="py-3 px-6 w-[11%]">Date</th>
+                  <th className="py-3 px-6 w-[24%]">Customer / Receiver</th>
+                  <th className="py-3 px-6 w-[20%]">Products / Items</th>
+                  <th className="py-3 px-6 w-[12%] text-right">Total Amount</th>
+                  <th className="py-3 px-6 w-[10%] text-center">Status</th>
                   <th className="py-3 px-6 w-[12%] text-center">Actions</th>
                 </tr>
               </thead>
@@ -198,44 +222,90 @@ export default function Dashboard({ triggerDirectPrint, triggerPdfDownload }) {
                       {formatCurrency(challan.totalAmount)}
                     </td>
                     
+                    {/* Status */}
+                    <td className="py-4 px-6 text-center">
+                      {challan.status === 'Cancelled' ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-100 font-sans">
+                          Cancelled
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 font-sans">
+                          Active
+                        </span>
+                      )}
+                    </td>
+
                     {/* Action buttons */}
-                    <td className="py-4 px-6">
-                      <div className="flex items-center justify-center gap-2">
-                        <Link
-                          to={`/view/${challan.id}`}
-                          className="p-1.5 text-slate-400 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
-                          title="View detailed A4"
-                        >
-                          <Eye size={16} />
-                        </Link>
-                        <button
-                          onClick={() => handleEdit(challan.id)}
-                          className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-md transition-colors cursor-pointer"
-                          title="Edit details"
-                        >
-                          <Edit size={16} />
-                        </button>
-                        <button
-                          onClick={() => triggerDirectPrint(challan)}
-                          className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
-                          title="Direct Print"
-                        >
-                          <Printer size={16} />
-                        </button>
-                        <button
-                          onClick={() => triggerPdfDownload(challan)}
-                          className="p-1.5 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-colors cursor-pointer"
-                          title="Download PDF"
-                        >
-                          <Download size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleOpenDelete(challan.id, challan.challanNumber)}
-                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
-                          title="Delete challan"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                    <td className="py-3 px-4">
+                      <div className="flex flex-col items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 justify-center">
+                          <Link
+                            to={`/view/${challan.id}`}
+                            className="p-1 text-slate-400 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
+                            title="View detailed A4"
+                          >
+                            <Eye size={15} />
+                          </Link>
+                          <button
+                            onClick={() => handleEdit(challan.id)}
+                            className="p-1 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-md transition-colors cursor-pointer"
+                            title="Edit details"
+                            disabled={!isLoggedIn || challan.status === 'Cancelled'}
+                            style={{ opacity: (!isLoggedIn || challan.status === 'Cancelled') ? 0.35 : 1, cursor: (!isLoggedIn || challan.status === 'Cancelled') ? 'not-allowed' : 'pointer' }}
+                          >
+                            <Edit size={15} />
+                          </button>
+                          <button
+                            onClick={() => triggerDirectPrint(challan)}
+                            className="p-1 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
+                            title="Direct Print"
+                          >
+                            <Printer size={15} />
+                          </button>
+                          <button
+                            onClick={() => triggerPdfDownload(challan)}
+                            className="p-1 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-colors cursor-pointer"
+                            title="Download PDF"
+                          >
+                            <Download size={15} />
+                          </button>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 border-t border-slate-100 pt-1.5 w-full justify-center">
+                          {challan.status === 'Cancelled' ? (
+                            <button
+                              onClick={() => handleReactivate(challan.id)}
+                              className="px-2 py-0.5 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded border border-emerald-200 transition-colors cursor-pointer flex items-center gap-1 text-[10px] font-extrabold uppercase bg-emerald-50/20"
+                              title="Reactivate Challan"
+                              disabled={!isLoggedIn}
+                              style={{ opacity: !isLoggedIn ? 0.35 : 1, cursor: !isLoggedIn ? 'not-allowed' : 'pointer' }}
+                            >
+                              <RotateCcw size={11} />
+                              <span>Reactivate</span>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleOpenCancel(challan.id, challan.challanNumber)}
+                              className="px-2 py-0.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded border border-red-200 transition-colors cursor-pointer flex items-center gap-1 text-[10px] font-extrabold uppercase bg-red-50/20"
+                              title="Cancel Challan"
+                              disabled={!isLoggedIn}
+                              style={{ opacity: !isLoggedIn ? 0.35 : 1, cursor: !isLoggedIn ? 'not-allowed' : 'pointer' }}
+                            >
+                              <Ban size={11} />
+                              <span>Cancel</span>
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleOpenDelete(challan.id, challan.challanNumber)}
+                            className="px-2 py-0.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded border border-red-200 transition-colors cursor-pointer flex items-center gap-1 text-[10px] font-extrabold uppercase bg-red-50/20"
+                            title="Delete challan"
+                            disabled={!isLoggedIn}
+                            style={{ opacity: !isLoggedIn ? 0.35 : 1, cursor: !isLoggedIn ? 'not-allowed' : 'pointer' }}
+                          >
+                            <Trash2 size={11} />
+                            <span>Delete</span>
+                          </button>
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -255,6 +325,20 @@ export default function Dashboard({ triggerDirectPrint, triggerPdfDownload }) {
         onCancel={() => {
           setDeleteId(null);
           setDeleteNo('');
+        }}
+      />
+
+      {/* Cancel Confirmation Dialog */}
+      <ConfirmDialog 
+        isOpen={cancelId !== null}
+        title="Cancel Delivery Challan?"
+        message={`Are you sure you want to cancel ${cancelNo}? This will mark it as CANCELLED on the document and PDF exports.`}
+        confirmText="Cancel Challan"
+        cancelText="Back"
+        onConfirm={handleConfirmCancel}
+        onCancel={() => {
+          setCancelId(null);
+          setCancelNo('');
         }}
       />
     </div>
