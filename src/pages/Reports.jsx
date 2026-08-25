@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { getChallans } from '../utils/storage';
-import { BarChart, Calendar as CalendarIcon, Hash } from 'lucide-react';
+import { formatCurrency } from '../utils/calculations';
+import { BarChart, Calendar as CalendarIcon, Hash, IndianRupee, Package, Printer, Download, Eye } from 'lucide-react';
+import { Link } from 'react-router-dom';
+
+import html2canvas from 'html2canvas-pro';
+import { jsPDF } from 'jspdf';
 
 export default function Reports() {
   const [challans, setChallans] = useState([]);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(() => {
-    // Default to current month YYYY-MM
     return new Date().toISOString().slice(0, 7);
   });
 
@@ -13,23 +18,44 @@ export default function Reports() {
     setChallans(getChallans());
   }, []);
 
-  // Filter challans for the selected month
   const monthlyChallans = challans.filter(c => c.date && c.date.startsWith(selectedMonth));
-  
-  // Sort them to find "from" and "to" easily
   const sortedChallans = [...monthlyChallans].sort((a, b) => a.challanNumber.localeCompare(b.challanNumber));
   
   const totalChallans = sortedChallans.length;
   const serialFrom = totalChallans > 0 ? sortedChallans[0].challanNumber : 'N/A';
   const serialTo = totalChallans > 0 ? sortedChallans[totalChallans - 1].challanNumber : 'N/A';
 
-  // Format month for display
+  const totalAmount = sortedChallans.reduce((sum, c) => sum + (c.totalAmount || 0), 0);
+  const totalItems = sortedChallans.reduce((sum, c) => sum + (c.totalQuantity || 0), 0);
+
   const displayMonth = selectedMonth ? new Date(selectedMonth + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '';
+
+  const downloadReport = async () => {
+    const reportElement = document.getElementById('report-content');
+    if (!reportElement) return;
+    
+    setIsDownloading(true);
+    try {
+      const canvas = await html2canvas(reportElement, { scale: 2, useCORS: true });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Monthly_Report_${selectedMonth}.pdf`);
+    } catch (error) {
+      console.error('Failed to generate report PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header bar */}
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 bg-white p-6 rounded-xl border border-slate-200 shadow-sm print:hidden">
         <div>
           <h1 className="text-2xl font-black text-slate-800 tracking-tight">Monthly Reports</h1>
           <p className="text-sm font-medium text-slate-500 mt-1">
@@ -48,56 +74,154 @@ export default function Reports() {
         </div>
       </div>
 
-      {/* Summary Card */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+      {/* Action Bar */}
+      <div className="flex justify-end gap-3 print:hidden">
+        <button 
+          onClick={downloadReport}
+          disabled={isDownloading}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-sm font-semibold shadow-sm transition-all cursor-pointer disabled:opacity-50"
+        >
+          <Download size={16} />
+          {isDownloading ? 'Generating...' : 'Download PDF'}
+        </button>
+        <button 
+          onClick={() => window.print()}
+          className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-sm font-semibold shadow-sm transition-all cursor-pointer"
+        >
+          <Printer size={16} />
+          Print Report
+        </button>
+      </div>
+
+      <div id="report-content" className="space-y-6 bg-slate-50 print:bg-white">
+        {/* Summary Section */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden print:shadow-none print:border-slate-800">
+        <div className="p-6 border-b border-slate-100 bg-slate-50/50 print:bg-transparent">
           <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
             <BarChart size={20} className="text-blue-700" />
             Summary for {displayMonth}
           </h2>
         </div>
         
-        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Total Delivery Challans */}
-          <div className="bg-white border border-slate-200 p-6 rounded-xl shadow-sm flex items-start gap-4">
-            <div className="p-3 bg-blue-50 text-blue-700 rounded-lg shrink-0">
-              <CalendarIcon size={24} />
+          <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm flex flex-col gap-3 print:border-slate-400">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-blue-50 text-blue-700 rounded-lg shrink-0 print:bg-transparent print:border print:border-slate-300">
+                <CalendarIcon size={20} />
+              </div>
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Challans</p>
             </div>
-            <div>
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Total Delivery Challans</p>
-              <h3 className="text-3xl font-black text-slate-800">{totalChallans}</h3>
+            <h3 className="text-3xl font-black text-slate-800">{totalChallans}</h3>
+          </div>
+
+          {/* Total Amount (Revenue) */}
+          <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm flex flex-col gap-3 print:border-slate-400">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-emerald-50 text-emerald-700 rounded-lg shrink-0 print:bg-transparent print:border print:border-slate-300">
+                <IndianRupee size={20} />
+              </div>
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Value</p>
             </div>
+            <h3 className="text-2xl font-black text-slate-800 font-mono truncate" title={formatCurrency(totalAmount)}>
+              {formatCurrency(totalAmount)}
+            </h3>
+          </div>
+
+          {/* Total Items Shipped */}
+          <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm flex flex-col gap-3 print:border-slate-400">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-purple-50 text-purple-700 rounded-lg shrink-0 print:bg-transparent print:border print:border-slate-300">
+                <Package size={20} />
+              </div>
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Items Shipped</p>
+            </div>
+            <h3 className="text-3xl font-black text-slate-800 font-mono">{totalItems}</h3>
           </div>
 
           {/* Serial Number Range */}
-          <div className="bg-white border border-slate-200 p-6 rounded-xl shadow-sm flex items-start gap-4">
-            <div className="p-3 bg-amber-50 text-amber-600 rounded-lg shrink-0">
-              <Hash size={24} />
+          <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm flex flex-col gap-3 print:border-slate-400">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg shrink-0 print:bg-transparent print:border print:border-slate-300">
+                <Hash size={20} />
+              </div>
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Serial Range</p>
             </div>
-            <div className="flex-1">
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Serial Number Range</p>
-              {totalChallans > 0 ? (
-                <div className="flex items-center justify-between mt-2">
-                  <div className="text-center">
-                    <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">From</p>
-                    <span className="inline-block px-3 py-1 bg-slate-100 text-slate-800 font-mono font-bold rounded-md text-sm">
-                      {serialFrom}
-                    </span>
-                  </div>
-                  <div className="text-slate-300 font-bold px-2">TO</div>
-                  <div className="text-center">
-                    <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">To</p>
-                    <span className="inline-block px-3 py-1 bg-slate-100 text-slate-800 font-mono font-bold rounded-md text-sm">
-                      {serialTo}
-                    </span>
-                  </div>
+            {totalChallans > 0 ? (
+              <div className="flex flex-col gap-1 mt-1">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">From:</span>
+                  <span className="font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded print:bg-transparent print:p-0">{serialFrom}</span>
                 </div>
-              ) : (
-                <div className="mt-2 text-sm font-semibold text-slate-400">No records found for this month.</div>
-              )}
-            </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">To:</span>
+                  <span className="font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded print:bg-transparent print:p-0">{serialTo}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-2 text-xs font-semibold text-slate-400">No records found.</div>
+            )}
           </div>
         </div>
+      </div>
+
+      {/* Challans List */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden print:shadow-none print:border-slate-800">
+        <div className="p-6 border-b border-slate-100 bg-slate-50/50 print:bg-transparent">
+          <h2 className="text-lg font-bold text-slate-800">Challans in {displayMonth}</h2>
+        </div>
+        
+        {sortedChallans.length === 0 ? (
+          <div className="p-12 text-center text-slate-400 font-medium">
+            No delivery challans generated in {displayMonth}.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse print:text-xs">
+              <thead>
+                <tr className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200 print:bg-transparent print:border-slate-400">
+                  <th className="py-3 px-6 w-[15%]">Challan No</th>
+                  <th className="py-3 px-6 w-[15%]">Date</th>
+                  <th className="py-3 px-6 w-[40%]">Customer</th>
+                  <th className="py-3 px-6 w-[15%] text-center">Items</th>
+                  <th className="py-3 px-6 w-[15%] text-right">Amount</th>
+                  <th className="py-3 px-6 w-[10%] text-center print:hidden">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 print:divide-slate-300">
+                {sortedChallans.map((challan) => (
+                  <tr key={challan.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="py-3 px-6 font-bold text-blue-900 font-mono">
+                      {challan.challanNumber}
+                    </td>
+                    <td className="py-3 px-6 text-slate-500 font-mono text-sm">
+                      {challan.date ? challan.date.split('-').reverse().join('/') : ''}
+                    </td>
+                    <td className="py-3 px-6 font-semibold text-slate-800 truncate max-w-[200px]" title={challan.customer}>
+                      {challan.customer.split('\n')[0]}
+                    </td>
+                    <td className="py-3 px-6 text-center text-slate-600 font-mono font-medium">
+                      {challan.totalQuantity}
+                    </td>
+                    <td className="py-3 px-6 text-right font-bold text-slate-900 font-mono">
+                      {formatCurrency(challan.totalAmount)}
+                    </td>
+                    <td className="py-3 px-6 text-center print:hidden">
+                      <Link
+                        to={`/view/${challan.id}`}
+                        className="inline-flex p-1.5 text-slate-400 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
+                        title="View Challan"
+                      >
+                        <Eye size={16} />
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
       </div>
     </div>
   );

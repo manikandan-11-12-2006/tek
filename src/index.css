@@ -2,15 +2,6 @@
 
 @layer utilities {
   @media print {
-    /* Hide everything on screen except the print mount container */
-    body * {
-      visibility: hidden;
-    }
-    
-    #print-mount, #print-mount * {
-      visibility: visible;
-    }
-    
     #print-mount {
       position: absolute;
       left: 0;

@@ -59,6 +59,7 @@ export default function App() {
       setPrintingChallan(savedChallan);
       setTimeout(() => {
         window.print();
+        setPrintingChallan(null);
         navigate(`/view/${savedChallan.id}`);
       }, 150);
     } else {
@@ -71,6 +72,7 @@ export default function App() {
     setPrintingChallan(challan);
     setTimeout(() => {
       window.print();
+      setPrintingChallan(null);
     }, 150);
   };
 
@@ -88,7 +90,7 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-800 font-sans">
+    <div className="flex print:block h-screen print:h-auto print:overflow-visible overflow-hidden bg-slate-50 print:bg-white text-slate-800 font-sans">
       {/* 1. Sidebar Component (drawer on mobile, sticky sidebar on desktop) */}
       <Sidebar 
         isOpen={sidebarOpen} 
@@ -97,9 +99,9 @@ export default function App() {
       />
 
       {/* 2. Main Content Frame */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden print:hidden">
+      <div className={`flex-1 flex flex-col print:block min-w-0 overflow-hidden print:overflow-visible ${printingChallan ? 'print:hidden' : ''}`}>
         {/* Top Header bar for mobile screen drawer toggling */}
-        <header className="lg:hidden shrink-0 flex items-center justify-between px-6 py-4 bg-[#1e293b] text-white shadow-md">
+        <header className="lg:hidden shrink-0 flex items-center justify-between px-6 py-4 bg-[#1e293b] text-white shadow-md print:hidden">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -116,7 +118,7 @@ export default function App() {
         </header>
 
         {/* Primary Page Canvas (Scrollable) */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <main className="flex-1 print:block overflow-y-auto print:overflow-visible p-4 sm:p-6 lg:p-8 print:p-0">
           <Routes>
             <Route 
               path="/" 

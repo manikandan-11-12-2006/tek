@@ -83,7 +83,7 @@ export default function Sidebar({ isOpen, onClose, companyName = "TEKPOWER ENERG
       )}
 
       {/* Desktop Sidebar (Persistent) */}
-      <aside className="hidden lg:block w-64 h-screen shrink-0 sticky top-0 border-r border-slate-200">
+      <aside className="hidden lg:block w-64 h-screen shrink-0 sticky top-0 border-r border-slate-200 print:hidden">
         {sidebarContent}
       </aside>
 
