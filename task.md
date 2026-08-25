@@ -1,0 +1,22 @@
+# Implementation Checklist - TEKPOWER ENERGY SOLUTIONS Delivery Challan Generator
+
+- [x] 1. Set up Tailwind CSS v4 configurations and custom print styles in `src/index.css` & `vite.config.js`
+- [x] 2. Create helper files in `src/utils/`
+    - [x] `calculations.js` (financial arithmetic & formatting)
+    - [x] `storage.js` (local storage API + default seeding)
+    - [x] `pdfGenerator.js` (html2canvas and jsPDF implementation)
+- [x] 3. Create sample data seeding in `src/data/sampleData.js`
+- [x] 4. Build components in `src/components/`
+    - [x] `Sidebar.jsx` (modern dashboard sidebar and mobile navigation drawer)
+    - [x] `StatCard.jsx` (dashboard KPI statistics cards)
+    - [x] `ConfirmDialog.jsx` (delete confirmation modal)
+    - [x] `ChallanPreview.jsx` (A4 sheet replicating paper challan with SVG logo, signature pad, etc.)
+    - [x] `ChallanForm.jsx` (form inputs, receiver details, dynamic product table)
+- [x] 5. Build pages in `src/pages/`
+    - [x] `Dashboard.jsx` (metrics and recent challans table)
+    - [x] `NewChallan.jsx` (create and edit wrappers)
+    - [x] `Challans.jsx` (challan list, search, sort, filter, action triggers)
+    - [x] `ChallanDetails.jsx` (challan view mode)
+    - [x] `Settings.jsx` (company details customization form)
+- [x] 6. Setup global routing and Direct Print container in `src/App.jsx`
+- [/] 7. Perform verification, testing, and create the final walkthrough
