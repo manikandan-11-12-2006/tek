@@ -153,11 +153,7 @@ export default function App() {
             />
             <Route 
               path="/new" 
-              element={
-                <RequireAuth redirectTo="/login" isLoggedIn={isLoggedIn}>
-                  <NewChallan onSave={handleSaveChallan} />
-                </RequireAuth>
-              } 
+              element={<NewChallan onSave={handleSaveChallan} />} 
             />
             <Route 
               path="/edit/:id" 
@@ -194,11 +190,7 @@ export default function App() {
             />
             <Route 
               path="/settings" 
-              element={
-                <RequireAuth redirectTo="/login" isLoggedIn={isLoggedIn}>
-                  <Settings onUpdateDetails={(details) => setCompanyDetails(details)} />
-                </RequireAuth>
-              } 
+              element={<Settings onUpdateDetails={(details) => setCompanyDetails(details)} />} 
             />
             <Route 
               path="/login" 
