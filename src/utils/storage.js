@@ -1,6 +1,6 @@
 import { ref, get, set, update, remove, child, push } from "firebase/database";
 import { database } from "./firebase";
-import { defaultCompanyDetails, sampleChallans } from '../data/sampleData';
+import { defaultCompanyDetails } from '../data/sampleData';
 
 // --- CUSTOMERS ---
 export const getCustomerSuggestions = async () => {
@@ -76,15 +76,10 @@ export const getChallans = async () => {
       const data = snapshot.val();
       return Object.values(data);
     }
-    const initialMap = {};
-    sampleChallans.forEach(c => {
-      initialMap[c.id] = c;
-    });
-    await set(ref(database, 'challans'), initialMap);
-    return sampleChallans;
+    return [];
   } catch (error) {
     console.error("Error getting challans:", error);
-    return sampleChallans;
+    return [];
   }
 };
 
