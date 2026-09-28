@@ -23,6 +23,7 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
   const [touched, setTouched] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [customerList, setCustomerList] = useState([]);
+  const [existingChallans, setExistingChallans] = useState([]);
   const [custSearch, setCustSearch] = useState('');
   const [showCustDropdown, setShowCustDropdown] = useState(false);
 
@@ -39,26 +40,30 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
 
   // Initialize form with initialData or default values
   useEffect(() => {
-    setSuggestions(getProductSuggestions());
-    setCustomerList(getCustomerSuggestions());
-    
-    if (initialData) {
-      setCustomer(initialData.customer || '');
-      setChallanNumber(initialData.challanNumber || '');
-      setDate(initialData.date || '');
-      setVehicleNumber(initialData.vehicleNumber || '');
-      setRemarks(initialData.remarks || '');
+    const loadData = async () => {
+      setSuggestions(await getProductSuggestions());
+      setCustomerList(await getCustomerSuggestions());
+      setExistingChallans(await getChallans());
       
-      const loadedProducts = (initialData.products || [{ name: '', quantity: '', rate: '', amount: 0 }]).map(p => ({
-        ...p,
-        unit: p.unit || 'nos'
-      }));
-      setProducts(loadedProducts);
-    } else {
-      // Create mode
-      setChallanNumber(generateNextChallanNumber());
-      setDate(new Date().toISOString().split('T')[0]); // YYYY-MM-DD
-    }
+      if (initialData) {
+        setCustomer(initialData.customer || '');
+        setChallanNumber(initialData.challanNumber || '');
+        setDate(initialData.date || '');
+        setVehicleNumber(initialData.vehicleNumber || '');
+        setRemarks(initialData.remarks || '');
+        
+        const loadedProducts = (initialData.products || [{ name: '', quantity: '', rate: '', amount: 0 }]).map(p => ({
+          ...p,
+          unit: p.unit || 'nos'
+        }));
+        setProducts(loadedProducts);
+      } else {
+        // Create mode
+        setChallanNumber(await generateNextChallanNumber());
+        setDate(new Date().toISOString().split('T')[0]); // YYYY-MM-DD
+      }
+    };
+    loadData();
   }, [initialData]);
 
   // Update totals dynamically
@@ -122,8 +127,8 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
         tempErrors.challanNumber = 'Challan number is required';
       }
     } else {
-      // Check for duplicate in localStorage (exclude current challan in Edit mode)
-      const isDuplicate = getChallans().some(c => 
+      // Check for duplicate in loaded challans (exclude current challan in Edit mode)
+      const isDuplicate = existingChallans.some(c => 
         c.challanNumber.toLowerCase().trim() === dcNo.toLowerCase().trim() && 
         (!initialData || c.id !== initialData.id)
       );

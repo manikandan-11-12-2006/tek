@@ -13,8 +13,11 @@ export default function Settings({ onUpdateDetails }) {
   const [isSaved, setIsSaved] = useState(false);
 
   useEffect(() => {
-    const details = getCompanyDetails();
-    loadDetails(details);
+    const fetchDetails = async () => {
+      const details = await getCompanyDetails();
+      loadDetails(details);
+    };
+    fetchDetails();
   }, []);
 
   const loadDetails = (details) => {
@@ -26,7 +29,7 @@ export default function Settings({ onUpdateDetails }) {
     setFooterTagline(details.footerTagline || '');
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     const updated = {
       companyName: companyName.trim(),
@@ -37,7 +40,7 @@ export default function Settings({ onUpdateDetails }) {
       footerTagline: footerTagline.trim()
     };
     
-    saveCompanyDetails(updated);
+    await saveCompanyDetails(updated);
     if (onUpdateDetails) {
       onUpdateDetails(updated);
     }

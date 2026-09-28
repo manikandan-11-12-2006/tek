@@ -9,17 +9,22 @@ import {
   LogIn,
   X,
   Zap,
-  BarChart
+  BarChart,
+  Trash2
 } from 'lucide-react';
 
-export default function Sidebar({ isOpen, onClose, companyName = "TEKPOWER ENERGY SOLUTIONS", isLoggedIn, onLogout }) {
+export default function Sidebar({ isOpen, onClose, companyName = "TEKPOWER ENERGY SOLUTIONS", isLoggedIn, userRole, onLogout }) {
   const links = [
     { to: '/', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/new', label: 'New Challan', icon: PlusCircle },
     { to: '/challans', label: 'All Challans', icon: FileText },
     { to: '/reports', label: 'Reports', icon: BarChart },
-    { to: '/settings', label: 'Settings', icon: SettingsIcon },
   ];
+
+  if (userRole === 'admin') {
+    links.push({ to: '/settings', label: 'Settings', icon: SettingsIcon });
+    links.push({ to: '/recycle-bin', label: 'Recycle Bin', icon: Trash2 });
+  }
 
   const sidebarContent = (
     <div className="flex flex-col h-full bg-[#1e293b] text-white select-none">
@@ -71,9 +76,9 @@ export default function Sidebar({ isOpen, onClose, companyName = "TEKPOWER ENERG
         </div>
         
         {/* Auth Action */}
-        {isLoggedIn ? (
+        {userRole === 'admin' ? (
           <div className="flex items-center justify-between px-3 py-2 text-xs text-slate-400 bg-slate-800/40 rounded border border-slate-700/30">
-            <span className="font-bold text-emerald-400">Admin</span>
+            <span className="font-bold text-emerald-400 uppercase">ADMIN</span>
             <button 
               onClick={onLogout}
               className="font-bold text-red-400 hover:text-red-300 transition-colors flex items-center gap-1 cursor-pointer"
@@ -83,13 +88,15 @@ export default function Sidebar({ isOpen, onClose, companyName = "TEKPOWER ENERG
             </button>
           </div>
         ) : (
-          <Link 
-            to="/login"
-            className="flex items-center justify-center gap-1.5 w-full py-1.5 bg-blue-700 hover:bg-blue-600 text-white rounded text-xs font-bold transition-all"
-          >
-            <LogIn size={12} />
-            Admin Login
-          </Link>
+          <div className="space-y-2">
+            <Link 
+              to="/login"
+              className="flex items-center justify-center gap-1.5 w-full py-1.5 bg-blue-700 hover:bg-blue-600 text-white rounded text-xs font-bold transition-all"
+            >
+              <LogIn size={12} />
+              Admin Login
+            </Link>
+          </div>
         )}
       </div>
     </div>

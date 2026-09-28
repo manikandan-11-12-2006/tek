@@ -27,7 +27,7 @@ export default function Login({ onLoginSuccess }) {
       onLoginSuccess();
       navigate(from, { replace: true });
     } else {
-      setError('Invalid username or password. (Hint: admin / tekpower)');
+      setError('Invalid username or password.');
     }
   };
 
@@ -40,7 +40,7 @@ export default function Login({ onLoginSuccess }) {
             <img src="/logo.png" alt="TEK POWER Logo" className="h-10 w-auto object-contain" />
           </div>
           <h2 className="text-xl font-black text-slate-800 tracking-tight">Admin Authentication</h2>
-          <p className="text-xs text-slate-400 mt-1">Sign in to edit and manage delivery challans</p>
+          <p className="text-xs text-slate-400 mt-1">Sign in to manage delivery challans</p>
         </div>
 
         {error && (
@@ -91,8 +91,8 @@ export default function Login({ onLoginSuccess }) {
 
           {/* Hint info */}
           <div className="bg-blue-50/40 p-3 rounded-lg border border-blue-100/50 text-[11px] text-blue-800 font-semibold leading-relaxed">
-            <span className="font-extrabold uppercase text-blue-900 block mb-0.5">Default Credentials:</span>
-            <span>Username: <code className="bg-blue-100/60 px-1 rounded font-mono text-[10px]">admin</code> | Password: <code className="bg-blue-100/60 px-1 rounded font-mono text-[10px]">tekpower</code></span>
+            <span className="font-extrabold uppercase text-blue-900 block mb-0.5">Note:</span>
+            <span>Username: <code className="bg-blue-100/60 px-1 rounded font-mono text-[10px]">admin</code> | Password: <code className="bg-blue-100/60 px-1 rounded font-mono text-[10px]">powertek</code></span>
           </div>
 
           {/* Submit Button */}

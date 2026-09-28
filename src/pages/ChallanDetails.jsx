@@ -15,7 +15,7 @@ import { getChallanById, deleteChallan, duplicateChallan, updateChallan } from '
 import ChallanPreview from '../components/ChallanPreview';
 import ConfirmDialog from '../components/ConfirmDialog';
 
-export default function ChallanDetails({ companyDetails, triggerDirectPrint, triggerPdfDownload, isLoggedIn }) {
+export default function ChallanDetails({ companyDetails, triggerDirectPrint, triggerPdfDownload, isLoggedIn, userRole }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [challan, setChallan] = useState(null);
@@ -24,22 +24,22 @@ export default function ChallanDetails({ companyDetails, triggerDirectPrint, tri
   const [cancelOpen, setCancelOpen] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
-    console.log("Fetching challan with ID:", id);
-    const data = getChallanById(id);
-    console.log("Fetched data:", data);
-    if (data) {
-      setChallan(data);
-    } else {
-      console.warn("Challan not found in storage!");
-      alert("Challan not found!");
-      navigate('/challans');
-    }
-    setLoading(false);
+    const fetchChallan = async () => {
+      setLoading(true);
+      const data = await getChallanById(id);
+      if (data) {
+        setChallan(data);
+      } else {
+        alert("Challan not found!");
+        navigate('/challans');
+      }
+      setLoading(false);
+    };
+    fetchChallan();
   }, [id, navigate]);
 
-  const handleDuplicate = () => {
-    const copy = duplicateChallan(challan.id);
+  const handleDuplicate = async () => {
+    const copy = await duplicateChallan(challan.id);
     if (copy) {
       alert(`Challan duplicated as ${copy.challanNumber}`);
       navigate(`/view/${copy.id}`);
@@ -48,8 +48,8 @@ export default function ChallanDetails({ companyDetails, triggerDirectPrint, tri
     }
   };
 
-  const handleDelete = () => {
-    const isDeleted = deleteChallan(challan.id);
+  const handleDelete = async () => {
+    const isDeleted = await deleteChallan(challan.id);
     if (isDeleted) {
       setDeleteOpen(false);
       navigate('/challans');
@@ -58,16 +58,16 @@ export default function ChallanDetails({ companyDetails, triggerDirectPrint, tri
     }
   };
 
-  const handleCancel = () => {
-    const updated = updateChallan(challan.id, { status: 'Cancelled' });
+  const handleCancel = async () => {
+    const updated = await updateChallan(challan.id, { status: 'Cancelled' });
     if (updated) {
       setChallan(updated);
       setCancelOpen(false);
     }
   };
 
-  const handleReactivate = () => {
-    const updated = updateChallan(challan.id, { status: 'Active' });
+  const handleReactivate = async () => {
+    const updated = await updateChallan(challan.id, { status: 'Active' });
     if (updated) {
       setChallan(updated);
     }
@@ -122,8 +122,8 @@ export default function ChallanDetails({ companyDetails, triggerDirectPrint, tri
           <button
             onClick={() => navigate(`/edit/${challan.id}`)}
             className="flex items-center gap-1.5 px-3.5 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-bold transition-colors cursor-pointer"
-            disabled={!isLoggedIn || challan.status === 'Cancelled'}
-            style={{ opacity: (!isLoggedIn || challan.status === 'Cancelled') ? 0.35 : 1, cursor: (!isLoggedIn || challan.status === 'Cancelled') ? 'not-allowed' : 'pointer' }}
+            disabled={!isLoggedIn || userRole !== 'admin' || challan.status === 'Cancelled'}
+            style={{ opacity: (!isLoggedIn || userRole !== 'admin' || challan.status === 'Cancelled') ? 0.35 : 1, cursor: (!isLoggedIn || userRole !== 'admin' || challan.status === 'Cancelled') ? 'not-allowed' : 'pointer' }}
           >
             <Edit size={14} />
             Edit
@@ -143,8 +143,8 @@ export default function ChallanDetails({ companyDetails, triggerDirectPrint, tri
             <button
               onClick={handleReactivate}
               className="flex items-center gap-1.5 px-3.5 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-bold transition-colors cursor-pointer"
-              disabled={!isLoggedIn}
-              style={{ opacity: !isLoggedIn ? 0.35 : 1, cursor: !isLoggedIn ? 'not-allowed' : 'pointer' }}
+              disabled={!isLoggedIn || userRole !== 'admin'}
+              style={{ opacity: (!isLoggedIn || userRole !== 'admin') ? 0.35 : 1, cursor: (!isLoggedIn || userRole !== 'admin') ? 'not-allowed' : 'pointer' }}
             >
               <RotateCcw size={14} />
               Reactivate
@@ -153,8 +153,8 @@ export default function ChallanDetails({ companyDetails, triggerDirectPrint, tri
             <button
               onClick={() => setCancelOpen(true)}
               className="flex items-center gap-1.5 px-3.5 py-2 border border-red-200 hover:bg-red-50 text-red-600 rounded-lg text-xs font-bold transition-colors cursor-pointer"
-              disabled={!isLoggedIn}
-              style={{ opacity: !isLoggedIn ? 0.35 : 1, cursor: !isLoggedIn ? 'not-allowed' : 'pointer' }}
+              disabled={!isLoggedIn || userRole !== 'admin'}
+              style={{ opacity: (!isLoggedIn || userRole !== 'admin') ? 0.35 : 1, cursor: (!isLoggedIn || userRole !== 'admin') ? 'not-allowed' : 'pointer' }}
             >
               <Ban size={14} />
               Cancel Challan
@@ -164,8 +164,8 @@ export default function ChallanDetails({ companyDetails, triggerDirectPrint, tri
           <button
             onClick={() => setDeleteOpen(true)}
             className="flex items-center gap-1.5 px-3.5 py-2 border border-red-200 hover:bg-red-50 text-red-600 rounded-lg text-xs font-bold transition-colors cursor-pointer"
-            disabled={!isLoggedIn}
-            style={{ opacity: !isLoggedIn ? 0.35 : 1, cursor: !isLoggedIn ? 'not-allowed' : 'pointer' }}
+            disabled={!isLoggedIn || userRole !== 'admin'}
+            style={{ opacity: (!isLoggedIn || userRole !== 'admin') ? 0.35 : 1, cursor: (!isLoggedIn || userRole !== 'admin') ? 'not-allowed' : 'pointer' }}
           >
             <Trash2 size={14} />
             Delete

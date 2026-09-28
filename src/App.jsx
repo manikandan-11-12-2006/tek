@@ -14,6 +14,7 @@ import ChallanDetails from './pages/ChallanDetails';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import Login from './pages/Login';
+import RecycleBin from './pages/RecycleBin';
 
 // Utilities
 import { 
@@ -23,12 +24,18 @@ import {
   getChallans
 } from './utils/storage';
 import { downloadChallanPDF } from './utils/pdfGenerator';
-import { checkLogin, logout } from './utils/auth';
+import { checkLogin, logout, getUserRole } from './utils/auth';
 
 // Route Guard component
-function RequireAuth({ children, redirectTo, isLoggedIn }) {
+function RequireAuth({ children, redirectTo, isLoggedIn, allowedRoles, userRole }) {
   const location = useLocation();
-  return isLoggedIn ? children : <Navigate to={redirectTo} replace state={{ from: location }} />;
+  if (!isLoggedIn) {
+    return <Navigate to={redirectTo} replace state={{ from: location }} />;
+  }
+  if (allowedRoles && !allowedRoles.includes(userRole)) {
+    return <Navigate to="/" replace />; // Or maybe a forbidden page, for now Dashboard
+  }
+  return children;
 }
 
 export default function App() {
@@ -37,6 +44,7 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [companyDetails, setCompanyDetails] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(checkLogin());
+  const [userRole, setUserRole] = useState(getUserRole());
   
   // Printing states
   const [printingChallan, setPrintingChallan] = useState(null);
@@ -44,7 +52,11 @@ export default function App() {
 
   // Load company details on startup
   useEffect(() => {
-    setCompanyDetails(getCompanyDetails());
+    const fetchCompanyDetails = async () => {
+      const details = await getCompanyDetails();
+      setCompanyDetails(details);
+    };
+    fetchCompanyDetails();
   }, []);
 
   // Sync mobile sidebar state with routing
@@ -53,14 +65,14 @@ export default function App() {
   }, [location]);
 
   // Save/Update handler
-  const handleSaveChallan = (formData, id, printAfterSave) => {
+  const handleSaveChallan = async (formData, id, printAfterSave) => {
     let savedChallan;
     if (id) {
       // Edit mode
-      savedChallan = updateChallan(id, formData);
+      savedChallan = await updateChallan(id, formData);
     } else {
       // Create mode
-      savedChallan = createChallan(formData);
+      savedChallan = await createChallan(formData);
     }
 
     if (printAfterSave) {
@@ -100,11 +112,13 @@ export default function App() {
 
   const handleLoginSuccess = () => {
     setIsLoggedIn(true);
+    setUserRole(getUserRole());
   };
 
   const handleLogout = () => {
     logout();
-    setIsLoggedIn(false);
+    setIsLoggedIn(true);
+    setUserRole('laa');
     navigate('/');
   };
 
@@ -116,6 +130,7 @@ export default function App() {
         onClose={() => setSidebarOpen(false)} 
         companyName={companyDetails?.companyName}
         isLoggedIn={isLoggedIn}
+        userRole={userRole}
         onLogout={handleLogout}
       />
 
@@ -148,13 +163,14 @@ export default function App() {
                   triggerDirectPrint={triggerDirectPrint} 
                   triggerPdfDownload={triggerPdfDownload} 
                   isLoggedIn={isLoggedIn}
+                  userRole={userRole}
                 />
               } 
             />
             <Route 
               path="/new" 
               element={
-                <RequireAuth redirectTo="/login" isLoggedIn={isLoggedIn}>
+                <RequireAuth redirectTo="/login" isLoggedIn={isLoggedIn} userRole={userRole} allowedRoles={['admin', 'laa']}>
                   <NewChallan onSave={handleSaveChallan} />
                 </RequireAuth>
               } 
@@ -162,7 +178,7 @@ export default function App() {
             <Route 
               path="/edit/:id" 
               element={
-                <RequireAuth redirectTo="/login" isLoggedIn={isLoggedIn}>
+                <RequireAuth redirectTo="/login" isLoggedIn={isLoggedIn} userRole={userRole} allowedRoles={['admin']}>
                   <NewChallan onSave={handleSaveChallan} />
                 </RequireAuth>
               } 
@@ -174,6 +190,7 @@ export default function App() {
                   triggerDirectPrint={triggerDirectPrint} 
                   triggerPdfDownload={triggerPdfDownload} 
                   isLoggedIn={isLoggedIn}
+                  userRole={userRole}
                 />
               } 
             />
@@ -185,18 +202,27 @@ export default function App() {
                   triggerDirectPrint={triggerDirectPrint}
                   triggerPdfDownload={triggerPdfDownload}
                   isLoggedIn={isLoggedIn}
+                  userRole={userRole}
                 />
               } 
             />
             <Route 
               path="/reports" 
-              element={<Reports />} 
+              element={<Reports userRole={userRole} />} 
             />
             <Route 
               path="/settings" 
               element={
-                <RequireAuth redirectTo="/login" isLoggedIn={isLoggedIn}>
+                <RequireAuth redirectTo="/login" isLoggedIn={isLoggedIn} userRole={userRole} allowedRoles={['admin']}>
                   <Settings onUpdateDetails={(details) => setCompanyDetails(details)} />
+                </RequireAuth>
+              } 
+            />
+            <Route 
+              path="/recycle-bin" 
+              element={
+                <RequireAuth redirectTo="/login" isLoggedIn={isLoggedIn} userRole={userRole} allowedRoles={['admin']}>
+                  <RecycleBin />
                 </RequireAuth>
               } 
             />

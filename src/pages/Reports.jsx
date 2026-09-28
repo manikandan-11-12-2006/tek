@@ -15,7 +15,10 @@ export default function Reports() {
   });
 
   useEffect(() => {
-    setChallans(getChallans());
+    const fetchData = async () => {
+      setChallans(await getChallans());
+    };
+    fetchData();
   }, []);
 
   const monthlyChallans = challans.filter(c => c.date && c.date.startsWith(selectedMonth));
@@ -201,23 +204,32 @@ export default function Reports() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 print:divide-slate-300">
-                {sortedChallans.map((challan) => (
-                  <tr key={challan.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="py-3 px-6 font-bold text-blue-900 font-mono">
-                      {challan.challanNumber}
-                    </td>
-                    <td className="py-3 px-6 text-slate-500 font-mono text-sm">
-                      {challan.date ? challan.date.split('-').reverse().join('/') : ''}
-                    </td>
-                    <td className="py-3 px-6 font-semibold text-slate-800 truncate max-w-[200px]" title={challan.customer}>
-                      {challan.customer.split('\n')[0]}
-                    </td>
-                    <td className="py-3 px-6 text-center text-slate-600 font-mono font-medium">
-                      {challan.totalQuantity}
-                    </td>
-                    <td className="py-3 px-6 text-right font-bold text-slate-900 font-mono">
-                      {formatCurrency(challan.totalAmount)}
-                    </td>
+                {sortedChallans.map((challan) => {
+                  const isCancelled = challan.status === 'Cancelled';
+                  return (
+                    <tr key={challan.id} className={`hover:bg-slate-50/50 transition-colors ${isCancelled ? 'opacity-60 bg-red-50/30' : ''}`}>
+                      <td className="py-3 px-6 font-bold text-blue-900 font-mono relative">
+                        <span className={isCancelled ? 'line-through text-slate-400' : ''}>
+                          {challan.challanNumber}
+                        </span>
+                        {isCancelled && (
+                          <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-100 text-red-700 print:border print:border-red-300">
+                            CANCELLED
+                          </span>
+                        )}
+                      </td>
+                      <td className={`py-3 px-6 font-mono text-sm ${isCancelled ? 'text-red-400/80 line-through' : 'text-slate-500'}`}>
+                        {challan.date ? challan.date.split('-').reverse().join('/') : ''}
+                      </td>
+                      <td className={`py-3 px-6 font-semibold truncate max-w-[200px] ${isCancelled ? 'text-red-900/60' : 'text-slate-800'}`} title={challan.customer}>
+                        {challan.customer.split('\n')[0]}
+                      </td>
+                      <td className="py-3 px-6 text-center text-slate-600 font-mono font-medium">
+                        {isCancelled ? '-' : challan.totalQuantity}
+                      </td>
+                      <td className="py-3 px-6 text-right font-bold text-slate-900 font-mono">
+                        {isCancelled ? <span className="text-red-400/80 line-through">{formatCurrency(challan.totalAmount)}</span> : formatCurrency(challan.totalAmount)}
+                      </td>
                     <td className="py-3 px-6 text-center print:hidden">
                       <Link
                         to={`/view/${challan.id}`}
@@ -228,7 +240,8 @@ export default function Reports() {
                       </Link>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

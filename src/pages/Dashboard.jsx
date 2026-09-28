@@ -19,7 +19,7 @@ import { formatCurrency } from '../utils/calculations';
 import StatCard from '../components/StatCard';
 import ConfirmDialog from '../components/ConfirmDialog';
 
-export default function Dashboard({ triggerDirectPrint, triggerPdfDownload, isLoggedIn }) {
+export default function Dashboard({ triggerDirectPrint, triggerPdfDownload, isLoggedIn, userRole }) {
   const navigate = useNavigate();
   const [challans, setChallans] = useState([]);
   const [deleteId, setDeleteId] = useState(null);
@@ -27,8 +27,13 @@ export default function Dashboard({ triggerDirectPrint, triggerPdfDownload, isLo
   const [cancelId, setCancelId] = useState(null);
   const [cancelNo, setCancelNo] = useState('');
 
+  const fetchChallans = async () => {
+    const data = await getChallans();
+    setChallans(data);
+  };
+
   useEffect(() => {
-    setChallans(getChallans());
+    fetchChallans();
   }, []);
 
   // Compute stats
@@ -59,10 +64,10 @@ export default function Dashboard({ triggerDirectPrint, triggerPdfDownload, isLo
     setDeleteNo(challanNo);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (deleteId) {
-      deleteChallan(deleteId);
-      setChallans(getChallans()); // reload
+      await deleteChallan(deleteId);
+      await fetchChallans(); // reload
       setDeleteId(null);
       setDeleteNo('');
     }
@@ -73,18 +78,18 @@ export default function Dashboard({ triggerDirectPrint, triggerPdfDownload, isLo
     setCancelNo(challanNo);
   };
 
-  const handleConfirmCancel = () => {
+  const handleConfirmCancel = async () => {
     if (cancelId) {
-      updateChallan(cancelId, { status: 'Cancelled' });
-      setChallans(getChallans()); // reload
+      await updateChallan(cancelId, { status: 'Cancelled' });
+      await fetchChallans(); // reload
       setCancelId(null);
       setCancelNo('');
     }
   };
 
-  const handleReactivate = (id) => {
-    updateChallan(id, { status: 'Active' });
-    setChallans(getChallans()); // reload
+  const handleReactivate = async (id) => {
+    await updateChallan(id, { status: 'Active' });
+    await fetchChallans(); // reload
   };
 
   // Trim customer text for table display
@@ -259,8 +264,8 @@ export default function Dashboard({ triggerDirectPrint, triggerPdfDownload, isLo
                             onClick={() => handleEdit(challan.id)}
                             className="p-1 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-md transition-colors cursor-pointer"
                             title="Edit details"
-                            disabled={!isLoggedIn || challan.status === 'Cancelled'}
-                            style={{ opacity: (!isLoggedIn || challan.status === 'Cancelled') ? 0.35 : 1, cursor: (!isLoggedIn || challan.status === 'Cancelled') ? 'not-allowed' : 'pointer' }}
+                            disabled={!isLoggedIn || userRole !== 'admin' || challan.status === 'Cancelled'}
+                            style={{ opacity: (!isLoggedIn || userRole !== 'admin' || challan.status === 'Cancelled') ? 0.35 : 1, cursor: (!isLoggedIn || userRole !== 'admin' || challan.status === 'Cancelled') ? 'not-allowed' : 'pointer' }}
                           >
                             <Edit size={15} />
                           </button>
@@ -286,8 +291,8 @@ export default function Dashboard({ triggerDirectPrint, triggerPdfDownload, isLo
                               onClick={() => handleReactivate(challan.id)}
                               className="px-2 py-0.5 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded border border-emerald-200 transition-colors cursor-pointer flex items-center gap-1 text-[10px] font-extrabold uppercase bg-emerald-50/20"
                               title="Reactivate Challan"
-                              disabled={!isLoggedIn}
-                              style={{ opacity: !isLoggedIn ? 0.35 : 1, cursor: !isLoggedIn ? 'not-allowed' : 'pointer' }}
+                              disabled={!isLoggedIn || userRole !== 'admin'}
+                              style={{ opacity: (!isLoggedIn || userRole !== 'admin') ? 0.35 : 1, cursor: (!isLoggedIn || userRole !== 'admin') ? 'not-allowed' : 'pointer' }}
                             >
                               <RotateCcw size={11} />
                               <span>Reactivate</span>
@@ -297,8 +302,8 @@ export default function Dashboard({ triggerDirectPrint, triggerPdfDownload, isLo
                               onClick={() => handleOpenCancel(challan.id, challan.challanNumber)}
                               className="px-2 py-0.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded border border-red-200 transition-colors cursor-pointer flex items-center gap-1 text-[10px] font-extrabold uppercase bg-red-50/20"
                               title="Cancel Challan"
-                              disabled={!isLoggedIn}
-                              style={{ opacity: !isLoggedIn ? 0.35 : 1, cursor: !isLoggedIn ? 'not-allowed' : 'pointer' }}
+                              disabled={!isLoggedIn || userRole !== 'admin'}
+                              style={{ opacity: (!isLoggedIn || userRole !== 'admin') ? 0.35 : 1, cursor: (!isLoggedIn || userRole !== 'admin') ? 'not-allowed' : 'pointer' }}
                             >
                               <Ban size={11} />
                               <span>Cancel</span>
@@ -308,8 +313,8 @@ export default function Dashboard({ triggerDirectPrint, triggerPdfDownload, isLo
                             onClick={() => handleOpenDelete(challan.id, challan.challanNumber)}
                             className="px-2 py-0.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded border border-red-200 transition-colors cursor-pointer flex items-center gap-1 text-[10px] font-extrabold uppercase bg-red-50/20"
                             title="Delete challan"
-                            disabled={!isLoggedIn}
-                            style={{ opacity: !isLoggedIn ? 0.35 : 1, cursor: !isLoggedIn ? 'not-allowed' : 'pointer' }}
+                            disabled={!isLoggedIn || userRole !== 'admin'}
+                            style={{ opacity: (!isLoggedIn || userRole !== 'admin') ? 0.35 : 1, cursor: (!isLoggedIn || userRole !== 'admin') ? 'not-allowed' : 'pointer' }}
                           >
                             <Trash2 size={11} />
                             <span>Delete</span>

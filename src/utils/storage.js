@@ -1,39 +1,29 @@
-import { sampleChallans, defaultCompanyDetails } from '../data/sampleData';
+import { ref, get, set, update, remove, child, push } from "firebase/database";
+import { database } from "./firebase";
+import { defaultCompanyDetails, sampleChallans } from '../data/sampleData';
 
-const CHALLANS_KEY = 'tekpower_challans';
-const COMPANY_KEY = 'tekpower_company_details';
-const SUGGESTIONS_KEY = 'tekpower_product_suggestions';
-const CUSTOMERS_KEY = 'tekpower_saved_customers';
-
-/**
- * Retrieves the saved customer address profiles, seeding initial samples if empty.
- * @returns {Array} List of customer profiles (address strings)
- */
-export const getCustomerSuggestions = () => {
+// --- CUSTOMERS ---
+export const getCustomerSuggestions = async () => {
   try {
-    const data = localStorage.getItem(CUSTOMERS_KEY);
-    if (!data) {
-      const defaults = [
-        "LARSEN & TOUBRO LIMITED\nGate No. 3, Powai Campus,\nSaki Vihar Road, Mumbai - 400072\nGSTIN: 27AAACL1234H1Z1\nMobile No: 9876543210",
-        "SIEMENS LTD\nThane Belapur Road,\nKalwa, Thane - 400601\nGSTIN: 27AAACS5678B2Z2\nMobile No: 8765432109"
-      ];
-      localStorage.setItem(CUSTOMERS_KEY, JSON.stringify(defaults));
-      return defaults;
+    const snapshot = await get(ref(database, 'customers'));
+    if (snapshot.exists()) {
+      return Object.values(snapshot.val());
     }
-    return JSON.parse(data) || [];
+    const defaults = [
+      "LARSEN & TOUBRO LIMITED\nGate No. 3, Powai Campus,\nSaki Vihar Road, Mumbai - 400072\nGSTIN: 27AAACL1234H1Z1\nMobile No: 9876543210",
+      "SIEMENS LTD\nThane Belapur Road,\nKalwa, Thane - 400601\nGSTIN: 27AAACS5678B2Z2\nMobile No: 8765432109"
+    ];
+    await set(ref(database, 'customers'), defaults);
+    return defaults;
   } catch (error) {
-    console.error("Error reading customer suggestions:", error);
+    console.error("Error fetching customers:", error);
     return [];
   }
 };
 
-/**
- * Saves a new customer address profile if it does not already exist.
- * @param {string} customerDetails 
- */
-export const addCustomerSuggestion = (customerDetails) => {
+export const addCustomerSuggestion = async (customerDetails) => {
   if (!customerDetails || !customerDetails.trim()) return;
-  const customers = getCustomerSuggestions();
+  const customers = await getCustomerSuggestions();
   const trimmed = customerDetails.trim();
   const normalizedNew = trimmed.toLowerCase().replace(/\s+/g, ' ');
   
@@ -43,108 +33,76 @@ export const addCustomerSuggestion = (customerDetails) => {
   
   if (!exists) {
     customers.push(trimmed);
-    localStorage.setItem(CUSTOMERS_KEY, JSON.stringify(customers));
+    await set(ref(database, 'customers'), customers);
   }
 };
 
-/**
- * Retrieves the product suggestions from localStorage, seeding default values if not present.
- * @returns {Array} List of product name suggestions
- */
-export const getProductSuggestions = () => {
+// --- PRODUCTS ---
+export const getProductSuggestions = async () => {
   try {
-    const data = localStorage.getItem(SUGGESTIONS_KEY);
-    if (!data) {
-      const defaults = [
-        "Control Panel",
-        "Capacitor Bank",
-        "APFC Panel",
-        "MCC Panel",
-        "Electrical Components",
-        "Spare Parts Kit",
-        "AMF Panel",
-        "Changeover Switch Panel",
-        "Energy Meter Panel"
-      ];
-      localStorage.setItem(SUGGESTIONS_KEY, JSON.stringify(defaults));
-      return defaults;
+    const snapshot = await get(ref(database, 'products'));
+    if (snapshot.exists()) {
+      return Object.values(snapshot.val());
     }
-    return JSON.parse(data) || [];
+    const defaults = [
+      "Control Panel", "Capacitor Bank", "APFC Panel", "MCC Panel",
+      "Electrical Components", "Spare Parts Kit", "AMF Panel", 
+      "Changeover Switch Panel", "Energy Meter Panel"
+    ];
+    await set(ref(database, 'products'), defaults);
+    return defaults;
   } catch (error) {
-    console.error("Error reading suggestions:", error);
+    console.error("Error fetching products:", error);
     return [];
   }
 };
 
-/**
- * Adds a new product suggestion if it doesn't already exist.
- * @param {string} name 
- */
-export const addProductSuggestion = (name) => {
+export const addProductSuggestion = async (name) => {
   if (!name || !name.trim()) return;
-  const suggestions = getProductSuggestions();
+  const suggestions = await getProductSuggestions();
   const trimmedName = name.trim();
   const exists = suggestions.some(item => item.toLowerCase() === trimmedName.toLowerCase());
   if (!exists) {
     suggestions.push(trimmedName);
-    localStorage.setItem(SUGGESTIONS_KEY, JSON.stringify(suggestions));
+    await set(ref(database, 'products'), suggestions);
   }
 };
 
-/**
- * Initialize storage with default data if empty.
- */
-export const initStorage = () => {
-  if (!localStorage.getItem(CHALLANS_KEY)) {
-    localStorage.setItem(CHALLANS_KEY, JSON.stringify(sampleChallans));
-  }
-  if (!localStorage.getItem(COMPANY_KEY)) {
-    localStorage.setItem(COMPANY_KEY, JSON.stringify(defaultCompanyDetails));
-  }
-  getProductSuggestions();
-  getCustomerSuggestions();
-};
-
-/**
- * Retrieves all challans. Seeds first if empty.
- * @returns {Array} List of challans
- */
-export const getChallans = () => {
-  initStorage();
+// --- CHALLANS ---
+export const getChallans = async () => {
   try {
-    return JSON.parse(localStorage.getItem(CHALLANS_KEY)) || [];
+    const snapshot = await get(ref(database, 'challans'));
+    if (snapshot.exists()) {
+      const data = snapshot.val();
+      return Object.values(data);
+    }
+    const initialMap = {};
+    sampleChallans.forEach(c => {
+      initialMap[c.id] = c;
+    });
+    await set(ref(database, 'challans'), initialMap);
+    return sampleChallans;
   } catch (error) {
-    console.error("Error reading challans from localStorage:", error);
-    return [];
+    console.error("Error getting challans:", error);
+    return sampleChallans;
   }
 };
 
-/**
- * Saves the full list of challans to localStorage.
- * @param {Array} challans 
- */
-export const saveChallans = (challans) => {
-  localStorage.setItem(CHALLANS_KEY, JSON.stringify(challans));
+export const getChallanById = async (id) => {
+  try {
+    const snapshot = await get(ref(database, `challans/${id}`));
+    if (snapshot.exists()) {
+      return snapshot.val();
+    }
+    return null;
+  } catch (error) {
+    console.error("Error getting challan by ID:", error);
+    return null;
+  }
 };
 
-/**
- * Fetches a single challan by its ID.
- * @param {string} id 
- * @returns {Object|null} The challan object or null
- */
-export const getChallanById = (id) => {
-  const challans = getChallans();
-  return challans.find(c => c.id === id) || null;
-};
-
-/**
- * Finds the highest numerical value in current challan numbers (TEK-XXXX)
- * and generates the next incremented code.
- * @returns {string} Next challan number (e.g. TEK-0004)
- */
-export const generateNextChallanNumber = () => {
-  const challans = getChallans();
-  
+export const generateNextChallanNumber = async () => {
+  const challans = await getChallans();
   const existingNums = new Set();
   challans.forEach(c => {
     if (c.challanNumber) {
@@ -166,75 +124,94 @@ export const generateNextChallanNumber = () => {
   return `TEK-${String(nextNum).padStart(4, '0')}`;
 };
 
-/**
- * Saves a new challan.
- * @param {Object} challan 
- * @returns {Object} The created challan
- */
-export const createChallan = (challan) => {
-  const challans = getChallans();
-  
+export const createChallan = async (challan) => {
+  const newId = challan.id || `tek-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   const newChallan = {
     ...challan,
-    id: challan.id || `tek-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    id: newId,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
   
-  challans.push(newChallan);
-  saveChallans(challans);
+  await set(ref(database, `challans/${newId}`), newChallan);
   return newChallan;
 };
 
-/**
- * Updates an existing challan by ID.
- * @param {string} id 
- * @param {Object} updatedData 
- * @returns {Object|null} The updated challan or null
- */
-export const updateChallan = (id, updatedData) => {
-  const challans = getChallans();
-  const index = challans.findIndex(c => c.id === id);
-  
-  if (index === -1) return null;
-  
-  const updatedChallan = {
-    ...challans[index],
+export const updateChallan = async (id, updatedData) => {
+  const challanRef = ref(database, `challans/${id}`);
+  const snapshot = await get(challanRef);
+  if (!snapshot.exists()) return null;
+
+  const currentData = snapshot.val();
+  const newData = {
+    ...currentData,
     ...updatedData,
     updatedAt: new Date().toISOString()
   };
-  
-  challans[index] = updatedChallan;
-  saveChallans(challans);
-  return updatedChallan;
+
+  await update(challanRef, newData);
+  return newData;
 };
 
-/**
- * Deletes a challan by ID.
- * @param {string} id 
- * @returns {boolean} True if deleted, false if not found
- */
-export const deleteChallan = (id) => {
-  const challans = getChallans();
-  const filtered = challans.filter(c => c.id !== id);
+// --- RECYCLE BIN / DELETE ---
+export const deleteChallan = async (id) => {
+  const challan = await getChallanById(id);
+  if (!challan) return false;
+
+  // Move to recycle bin
+  const deletedAt = new Date().toISOString();
+  await set(ref(database, `recycle_bin/${id}`), { ...challan, deletedAt });
   
-  if (filtered.length === challans.length) return false;
-  
-  saveChallans(filtered);
+  // Remove from main challans
+  await remove(ref(database, `challans/${id}`));
   return true;
 };
 
-/**
- * Duplicates a challan, generating a new ID, next challan number, and current date.
- * @param {string} id 
- * @returns {Object|null} The new duplicated challan
- */
-export const duplicateChallan = (id) => {
-  const original = getChallanById(id);
+export const getRecycleBin = async () => {
+  try {
+    const snapshot = await get(ref(database, 'recycle_bin'));
+    if (snapshot.exists()) {
+      return Object.values(snapshot.val());
+    }
+    return [];
+  } catch (error) {
+    console.error("Error getting recycle bin:", error);
+    return [];
+  }
+};
+
+export const restoreChallan = async (id) => {
+  try {
+    const snapshot = await get(ref(database, `recycle_bin/${id}`));
+    if (!snapshot.exists()) return false;
+    
+    const challanData = snapshot.val();
+    delete challanData.deletedAt; // remove deletedAt flag
+    
+    // Put back into challans
+    await set(ref(database, `challans/${id}`), challanData);
+    
+    // Remove from recycle bin
+    await remove(ref(database, `recycle_bin/${id}`));
+    return true;
+  } catch (error) {
+    console.error("Error restoring challan:", error);
+    return false;
+  }
+};
+
+export const permanentDeleteChallan = async (id) => {
+  await remove(ref(database, `recycle_bin/${id}`));
+  return true;
+};
+
+// --- MISC ---
+export const duplicateChallan = async (id) => {
+  const original = await getChallanById(id);
   if (!original) return null;
   
-  const nextNumber = generateNextChallanNumber();
-  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const nextNumber = await generateNextChallanNumber();
+  const today = new Date().toISOString().split('T')[0];
   
   const copy = {
     ...original,
@@ -245,27 +222,24 @@ export const duplicateChallan = (id) => {
     updatedAt: new Date().toISOString()
   };
   
-  return createChallan(copy);
+  await set(ref(database, `challans/${copy.id}`), copy);
+  return copy;
 };
 
-/**
- * Retrieves the company details profile.
- * @returns {Object} Company details
- */
-export const getCompanyDetails = () => {
-  initStorage();
+export const getCompanyDetails = async () => {
   try {
-    return JSON.parse(localStorage.getItem(COMPANY_KEY)) || defaultCompanyDetails;
+    const snapshot = await get(ref(database, 'companyDetails'));
+    if (snapshot.exists()) {
+      return snapshot.val();
+    }
+    await set(ref(database, 'companyDetails'), defaultCompanyDetails);
+    return defaultCompanyDetails;
   } catch (error) {
-    console.error("Error reading company details:", error);
+    console.error("Error getting company details:", error);
     return defaultCompanyDetails;
   }
 };
 
-/**
- * Updates the company details profile.
- * @param {Object} details 
- */
-export const saveCompanyDetails = (details) => {
-  localStorage.setItem(COMPANY_KEY, JSON.stringify(details));
+export const saveCompanyDetails = async (details) => {
+  await set(ref(database, 'companyDetails'), details);
 };

@@ -11,15 +11,18 @@ export default function NewChallan({ onSave }) {
 
   useEffect(() => {
     if (id) {
-      setLoading(true);
-      const data = getChallanById(id);
-      if (data) {
-        setChallan(data);
-      } else {
-        alert("Challan not found!");
-        navigate('/');
-      }
-      setLoading(false);
+      const fetchChallan = async () => {
+        setLoading(true);
+        const data = await getChallanById(id);
+        if (data) {
+          setChallan(data);
+        } else {
+          alert("Challan not found!");
+          navigate('/');
+        }
+        setLoading(false);
+      };
+      fetchChallan();
     } else {
       setChallan(null);
     }
