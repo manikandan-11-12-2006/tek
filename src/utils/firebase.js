@@ -1,4 +1,4 @@
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { getDatabase } from "firebase/database";
 import { getAnalytics } from "firebase/analytics";
 
@@ -13,7 +13,7 @@ const firebaseConfig = {
   databaseURL: "https://tekpower-57db5-default-rtdb.asia-southeast1.firebasedatabase.app/"
 };
 
-const app = initializeApp(firebaseConfig);
+const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 const database = getDatabase(app);
 const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
 
