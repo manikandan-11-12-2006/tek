@@ -9,11 +9,21 @@ import {
   LogIn,
   X,
   Zap,
+  CheckCircle2,
   BarChart,
   Trash2
 } from 'lucide-react';
 
-export default function Sidebar({ isOpen, onClose, companyName = "TEKPOWER ENERGY SOLUTIONS", isLoggedIn, userRole, onLogout }) {
+export default function Sidebar({ 
+  isOpen, 
+  onClose, 
+  companyName = "TEKPOWER ENERGY SOLUTIONS", 
+  isLoggedIn, 
+  userRole, 
+  onLogout, 
+  onOpenSubscription,
+  isSubscriptionPaid = false
+}) {
   const links = [
     { to: '/', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/new', label: 'New Challan', icon: PlusCircle },
@@ -98,6 +108,29 @@ export default function Sidebar({ isOpen, onClose, companyName = "TEKPOWER ENERG
             </Link>
           </div>
         )}
+
+        {/* Subscription Plan Action */}
+        {isSubscriptionPaid ? (
+          <button
+            onClick={onOpenSubscription}
+            className="flex items-center justify-between w-full px-3 py-2 bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 rounded-lg text-xs font-semibold cursor-pointer hover:bg-emerald-900/50 transition-all shadow-sm"
+            title="Subscription is active. Click to view renewal details."
+          >
+            <div className="flex items-center gap-1.5">
+              <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />
+              <span>Plan Active</span>
+            </div>
+            <span className="text-[10px] text-emerald-300/80 font-normal">Renews 1st</span>
+          </button>
+        ) : onOpenSubscription ? (
+          <button
+            onClick={onOpenSubscription}
+            className="flex items-center justify-center gap-2 w-full py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold rounded-lg text-xs transition-all shadow-md cursor-pointer"
+          >
+            <Zap size={14} className="fill-current" />
+            <span>₹1/Mo Subscription</span>
+          </button>
+        ) : null}
       </div>
     </div>
   );

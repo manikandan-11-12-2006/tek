@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
-import { Menu, FileSpreadsheet, Loader2 } from 'lucide-react';
+import { Menu, Loader2 } from 'lucide-react';
 
 // Components
 import Sidebar from './components/Sidebar';
 import ChallanPreview from './components/ChallanPreview';
+import SubscriptionModal from './components/SubscriptionModal';
+import SubscriptionBanner from './components/SubscriptionBanner';
 
 // Pages
 import Dashboard from './pages/Dashboard';
@@ -20,11 +22,15 @@ import RecycleBin from './pages/RecycleBin';
 import { 
   getCompanyDetails, 
   createChallan, 
-  updateChallan,
-  getChallans
+  updateChallan
 } from './utils/storage';
 import { downloadChallanPDF } from './utils/pdfGenerator';
 import { checkLogin, logout, getUserRole } from './utils/auth';
+import { 
+  getSubscriptionStatus, 
+  syncSubscriptionFromDatabase, 
+  listenToSubscription 
+} from './utils/razorpay';
 
 // Route Guard component
 function RequireAuth({ children, redirectTo, isLoggedIn, allowedRoles, userRole }) {
@@ -33,7 +39,7 @@ function RequireAuth({ children, redirectTo, isLoggedIn, allowedRoles, userRole 
     return <Navigate to={redirectTo} replace state={{ from: location }} />;
   }
   if (allowedRoles && !allowedRoles.includes(userRole)) {
-    return <Navigate to="/" replace />; // Or maybe a forbidden page, for now Dashboard
+    return <Navigate to="/" replace />;
   }
   return children;
 }
@@ -45,7 +51,13 @@ export default function App() {
   const [companyDetails, setCompanyDetails] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(checkLogin());
   const [userRole, setUserRole] = useState(getUserRole());
-  
+
+  // Subscription state
+  // status: "active" | "warning" | "blocked"
+  const [subStatus, setSubStatus] = useState(() => getSubscriptionStatus());
+  const [isSubModalOpen, setIsSubModalOpen] = useState(false);
+  const [isBannerDismissed, setIsBannerDismissed] = useState(false);
+
   // Printing states
   const [printingChallan, setPrintingChallan] = useState(null);
   const [isPdfProcessing, setIsPdfProcessing] = useState(false);
@@ -59,6 +71,33 @@ export default function App() {
     fetchCompanyDetails();
   }, []);
 
+  // Sync and listen to subscription status from Firebase Realtime Database
+  useEffect(() => {
+    syncSubscriptionFromDatabase().then(() => {
+      setSubStatus(getSubscriptionStatus());
+    });
+
+    const unsubscribe = listenToSubscription((newStatus) => {
+      setSubStatus(newStatus);
+    });
+
+    return () => {
+      if (typeof unsubscribe === "function") unsubscribe();
+    };
+  }, []);
+
+  // Re-check subscription status every time the page becomes visible
+  // (handles midnight crossing when user leaves browser open)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        setSubStatus(getSubscriptionStatus());
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, []);
+
   // Sync mobile sidebar state with routing
   useEffect(() => {
     setSidebarOpen(false);
@@ -68,15 +107,12 @@ export default function App() {
   const handleSaveChallan = async (formData, id, printAfterSave) => {
     let savedChallan;
     if (id) {
-      // Edit mode
       savedChallan = await updateChallan(id, formData);
     } else {
-      // Create mode
       savedChallan = await createChallan(formData);
     }
 
     if (printAfterSave) {
-      // Set to print mount and trigger print
       setPrintingChallan(savedChallan);
       setTimeout(() => {
         window.print();
@@ -122,6 +158,19 @@ export default function App() {
     navigate('/');
   };
 
+  // Called after successful payment — refresh subscription status
+  const handleSubscriptionSuccess = useCallback((paymentId) => {
+    setSubStatus(getSubscriptionStatus());
+    setIsSubModalOpen(false);
+    setIsBannerDismissed(false);
+  }, []);
+
+  // Show banner when status is "warning" and not manually dismissed
+  const showBanner = subStatus === "warning" && !isBannerDismissed;
+  // Show hard-block modal when status is "blocked"
+  const showBlockModal = subStatus === "blocked";
+  const isPaidThisMonth = subStatus === "active";
+
   return (
     <div className="flex print:block h-screen print:h-auto print:overflow-visible overflow-hidden bg-slate-50 print:bg-white text-slate-800 font-sans">
       {/* 1. Sidebar Component (drawer on mobile, sticky sidebar on desktop) */}
@@ -132,6 +181,8 @@ export default function App() {
         isLoggedIn={isLoggedIn}
         userRole={userRole}
         onLogout={handleLogout}
+        onOpenSubscription={() => setIsSubModalOpen(true)}
+        isSubscriptionPaid={isPaidThisMonth}
       />
 
       {/* 2. Main Content Frame */}
@@ -152,6 +203,14 @@ export default function App() {
           </div>
           <div className="text-xs text-slate-400 font-semibold">Challan Generator</div>
         </header>
+
+        {/* Subscription Reminder Banner — shown on Day 1 & 2 if not paid */}
+        {showBanner && (
+          <SubscriptionBanner
+            onPay={() => setIsSubModalOpen(true)}
+            onDismiss={() => setIsBannerDismissed(true)}
+          />
+        )}
 
         {/* Primary Page Canvas (Scrollable) */}
         <main className="flex-1 print:block overflow-y-auto print:overflow-visible p-4 sm:p-6 lg:p-8 print:p-0">
@@ -234,7 +293,7 @@ export default function App() {
         </main>
       </div>
 
-      {/* 3. Global Print Mount (ONLY visible in @media print or positioned off-screen for html2canvas PDF rendering) */}
+      {/* 3. Global Print Mount */}
       {printingChallan && (
         <div id="print-mount" className="absolute -left-[9999px] top-0 print:left-0 print:relative">
           <ChallanPreview challan={printingChallan} companyDetails={companyDetails} />
@@ -251,6 +310,23 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* 5. Subscription Modal — Manual open from sidebar button */}
+      <SubscriptionModal
+        isOpen={isSubModalOpen && !showBlockModal}
+        isBlocked={false}
+        isPaid={isPaidThisMonth}
+        onClose={() => setIsSubModalOpen(false)}
+        onSuccess={handleSubscriptionSuccess}
+      />
+
+      {/* 6. Hard Block Modal — shown from Day 3 if not paid (no close button) */}
+      <SubscriptionModal
+        isOpen={showBlockModal}
+        isBlocked={true}
+        isPaid={false}
+        onSuccess={handleSubscriptionSuccess}
+      />
     </div>
   );
 }
