@@ -290,13 +290,41 @@ export const downloadChallanPDF = async (challan, companyDetails) => {
 
       if (prod.name !== undefined && prod.name !== '') {
          pdf.text(String(currentProdIdx + 1), (tableX + colX.sno) / 2, textY, { align: 'center' });
-         const truncatedName = prod.name.length > 52 ? prod.name.substring(0, 49) + "..." : prod.name;
-         pdf.text(truncatedName, colX.sno + 3, textY);
-         if(prod.quantity) {
+         
+         // Dynamically wrap product name to show all words
+         pdf.setFontSize(8.5);
+         let nameLines = pdf.splitTextToSize(prod.name, 96);
+         if (nameLines.length === 1) {
+           pdf.text(nameLines[0], colX.sno + 3, textY);
+         } else if (nameLines.length === 2) {
+           pdf.setFontSize(7.5);
+           nameLines = pdf.splitTextToSize(prod.name, 96);
+           if (nameLines.length === 1) {
+             pdf.text(nameLines[0], colX.sno + 3, textY);
+           } else {
+             pdf.text(nameLines[0], colX.sno + 3, currentY + 3.1);
+             pdf.text(nameLines[1], colX.sno + 3, currentY + 5.9);
+           }
+         } else {
+           pdf.setFontSize(6.8);
+           nameLines = pdf.splitTextToSize(prod.name, 96);
+           const startY = currentY + 2.5;
+           const lineGap = 2.2;
+           nameLines.slice(0, 3).forEach((line, lineIdx) => {
+             pdf.text(line, colX.sno + 3, startY + (lineIdx * lineGap));
+           });
+         }
+         pdf.setFontSize(8.5);
+
+         if(prod.quantity && parseFloat(prod.quantity) > 0) {
            const qtyText = prod.unit ? `${prod.quantity} ${prod.unit}` : String(prod.quantity);
            pdf.text(qtyText, (colX.products + colX.qty) / 2, textY, { align: 'center' });
          }
-         if(prod.rate !== undefined && prod.rate !== '') pdf.text(parseFloat(prod.rate).toFixed(2), colX.rate - 2, textY, { align: 'right' });
+         if(prod.rate !== undefined && prod.rate !== '' && parseFloat(prod.rate) > 0) {
+           pdf.text(parseFloat(prod.rate).toFixed(2), colX.rate - 2, textY, { align: 'right' });
+         } else if (parseFloat(prod.quantity) > 0 && prod.rate !== undefined && prod.rate !== '') {
+           pdf.text("0.00", colX.rate - 2, textY, { align: 'right' });
+         }
          if(prod.amount !== undefined && prod.amount !== '') pdf.text(parseFloat(prod.amount).toFixed(2), 198, textY, { align: 'right' });
       }
 
@@ -321,7 +349,12 @@ export const downloadChallanPDF = async (challan, companyDetails) => {
       const totalQty = realProducts.reduce((sum, p) => sum + (parseFloat(p.quantity) || 0), 0);
       pdf.text(String(totalQty), (colX.products + colX.qty) / 2, totalRowY + 5.2, { align: 'center' });
       
-      const totalAmount = realProducts.reduce((sum, p) => sum + ((parseFloat(p.quantity) || 0) * (parseFloat(p.rate) || 0)), 0);
+      const totalAmount = realProducts.reduce((sum, p) => {
+        if (p.amount !== undefined && p.amount !== '' && !isNaN(parseFloat(p.amount))) {
+          return sum + parseFloat(p.amount);
+        }
+        return sum + ((parseFloat(p.quantity) || 0) * (parseFloat(p.rate) || 0));
+      }, 0);
       pdf.text(formatPdfCurrency(totalAmount), 198, totalRowY + 5.2, { align: 'right' });
 
       // 5. Remarks / Description Box (Rendered only on last page)

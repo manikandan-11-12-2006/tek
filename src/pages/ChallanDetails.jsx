@@ -38,8 +38,10 @@ export default function ChallanDetails({ companyDetails, triggerDirectPrint, tri
     fetchChallan();
   }, [id, navigate]);
 
+  const challanId = challan?.id || id;
+
   const handleDuplicate = async () => {
-    const copy = await duplicateChallan(challan.id);
+    const copy = await duplicateChallan(challanId);
     if (copy) {
       alert(`Challan duplicated as ${copy.challanNumber}`);
       navigate(`/view/${copy.id}`);
@@ -49,7 +51,7 @@ export default function ChallanDetails({ companyDetails, triggerDirectPrint, tri
   };
 
   const handleDelete = async () => {
-    const isDeleted = await deleteChallan(challan.id);
+    const isDeleted = await deleteChallan(challanId);
     if (isDeleted) {
       setDeleteOpen(false);
       navigate('/challans');
@@ -59,7 +61,7 @@ export default function ChallanDetails({ companyDetails, triggerDirectPrint, tri
   };
 
   const handleCancel = async () => {
-    const updated = await updateChallan(challan.id, { status: 'Cancelled' });
+    const updated = await updateChallan(challanId, { status: 'Cancelled' });
     if (updated) {
       setChallan(updated);
       setCancelOpen(false);
@@ -67,7 +69,7 @@ export default function ChallanDetails({ companyDetails, triggerDirectPrint, tri
   };
 
   const handleReactivate = async () => {
-    const updated = await updateChallan(challan.id, { status: 'Active' });
+    const updated = await updateChallan(challanId, { status: 'Active' });
     if (updated) {
       setChallan(updated);
     }
@@ -120,7 +122,7 @@ export default function ChallanDetails({ companyDetails, triggerDirectPrint, tri
         {/* Buttons */}
         <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={() => navigate(`/edit/${challan.id}`)}
+            onClick={() => navigate(`/edit/${challanId}`)}
             className="flex items-center gap-1.5 px-3.5 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-bold transition-colors cursor-pointer"
             disabled={!isLoggedIn || userRole !== 'admin' || challan.status === 'Cancelled'}
             style={{ opacity: (!isLoggedIn || userRole !== 'admin' || challan.status === 'Cancelled') ? 0.35 : 1, cursor: (!isLoggedIn || userRole !== 'admin' || challan.status === 'Cancelled') ? 'not-allowed' : 'pointer' }}

@@ -144,22 +144,22 @@ export default function ChallanPreview({ challan, companyDetails }) {
                       return (
                         <tr 
                           key={idx} 
-                          className="text-[11px] font-semibold h-[25px]"
+                          className={`text-[11px] font-semibold ${isPlaceholder ? 'h-[25px]' : 'min-h-[25px]'}`}
                         >
-                          <td className={`py-1 px-2 border-r border-slate-900 text-center text-slate-500 font-mono ${!isPlaceholder ? 'border-b border-slate-900' : ''}`}>
+                          <td className={`py-1 px-2 border-r border-slate-900 text-center text-slate-500 font-mono align-middle ${!isPlaceholder ? 'border-b border-slate-900' : ''}`}>
                             {!isPlaceholder ? globalIdx : ''}
                           </td>
-                          <td className={`py-1 px-3 border-r border-slate-900 truncate text-slate-900 font-medium ${!isPlaceholder ? 'border-b border-slate-900' : ''}`}>
+                          <td className={`py-1 px-3 border-r border-slate-900 break-words whitespace-normal leading-tight text-slate-900 font-medium align-middle ${!isPlaceholder ? 'border-b border-slate-900' : ''}`}>
                             {prod.name}
                           </td>
-                          <td className={`py-1 px-2 border-r border-slate-900 text-right font-mono text-slate-900 ${!isPlaceholder ? 'border-b border-slate-900' : ''}`}>
-                            {!isPlaceholder ? `${prod.quantity} ${prod.unit || ''}` : ''}
+                          <td className={`py-1 px-2 border-r border-slate-900 text-right font-mono text-slate-900 align-middle ${!isPlaceholder ? 'border-b border-slate-900' : ''}`}>
+                            {!isPlaceholder ? (parseFloat(prod.quantity) > 0 ? `${prod.quantity} ${prod.unit || ''}` : '') : ''}
                           </td>
-                          <td className={`py-1 px-2 border-r border-slate-900 text-right font-mono text-slate-900 ${!isPlaceholder ? 'border-b border-slate-900' : ''}`}>
-                            {!isPlaceholder ? parseFloat(prod.rate).toFixed(2) : ''}
+                          <td className={`py-1 px-2 border-r border-slate-900 text-right font-mono text-slate-900 align-middle ${!isPlaceholder ? 'border-b border-slate-900' : ''}`}>
+                            {!isPlaceholder ? (prod.rate !== undefined && prod.rate !== '' && !isNaN(parseFloat(prod.rate)) && parseFloat(prod.rate) > 0 ? parseFloat(prod.rate).toFixed(2) : (parseFloat(prod.quantity) > 0 ? '0.00' : '')) : ''}
                           </td>
-                          <td className={`py-1 px-2 text-right font-mono text-slate-900 ${!isPlaceholder ? 'border-b border-slate-900' : ''}`}>
-                            {!isPlaceholder ? parseFloat(prod.amount).toFixed(2) : ''}
+                          <td className={`py-1 px-2 text-right font-mono text-slate-900 align-middle ${!isPlaceholder ? 'border-b border-slate-900' : ''}`}>
+                            {!isPlaceholder ? (prod.amount !== undefined && prod.amount !== '' && !isNaN(parseFloat(prod.amount)) ? parseFloat(prod.amount).toFixed(2) : '0.00') : ''}
                           </td>
                         </tr>
                       );

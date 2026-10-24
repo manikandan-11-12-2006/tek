@@ -7,13 +7,15 @@ export default function NewChallan({ onSave }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [challan, setChallan] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(Boolean(id));
 
   useEffect(() => {
+    let isCancelled = false;
     if (id) {
       const fetchChallan = async () => {
         setLoading(true);
         const data = await getChallanById(id);
+        if (isCancelled) return;
         if (data) {
           setChallan(data);
         } else {
@@ -25,22 +27,26 @@ export default function NewChallan({ onSave }) {
       fetchChallan();
     } else {
       setChallan(null);
+      setLoading(false);
     }
+    return () => {
+      isCancelled = true;
+    };
   }, [id, navigate]);
 
   const handleSave = (formData, printAfterSave) => {
-    onSave(formData, id, printAfterSave);
+    onSave(formData, challan?.id || id, printAfterSave);
   };
 
   const handleCancel = () => {
     if (id) {
-      navigate(`/view/${id}`);
+      navigate(`/view/${challan?.id || id}`);
     } else {
       navigate('/');
     }
   };
 
-  if (loading) {
+  if (id && (loading || !challan)) {
     return (
       <div className="flex items-center justify-center h-48 bg-white rounded-xl border border-slate-200 shadow-sm">
         <div className="text-slate-500 font-medium">Loading challan details...</div>
@@ -63,6 +69,7 @@ export default function NewChallan({ onSave }) {
       </div>
 
       <ChallanForm 
+        key={challan?.id || (id ? id : 'new')}
         initialData={challan} 
         onSave={handleSave} 
         onCancel={handleCancel} 

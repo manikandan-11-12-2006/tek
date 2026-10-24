@@ -11,14 +11,16 @@ import {
 } from '../utils/storage';
 
 export default function ChallanForm({ initialData, onSave, onCancel }) {
-  const [customer, setCustomer] = useState('');
-  const [challanNumber, setChallanNumber] = useState('');
-  const [date, setDate] = useState('');
-  const [vehicleNumber, setVehicleNumber] = useState('');
-  const [remarks, setRemarks] = useState('');
-  const [products, setProducts] = useState([
-    { name: '', quantity: '', unit: 'nos', rate: '', amount: 0 }
-  ]);
+  const [customer, setCustomer] = useState(initialData?.customer || '');
+  const [challanNumber, setChallanNumber] = useState(initialData?.challanNumber || '');
+  const [date, setDate] = useState(initialData?.date || '');
+  const [vehicleNumber, setVehicleNumber] = useState(initialData?.vehicleNumber || '');
+  const [remarks, setRemarks] = useState(initialData?.remarks || '');
+  const [products, setProducts] = useState(
+    initialData?.products?.length > 0
+      ? initialData.products.map(p => ({ ...p, unit: p.unit || 'nos' }))
+      : [{ name: '', quantity: '', unit: 'nos', rate: '', amount: 0 }]
+  );
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
@@ -38,32 +40,46 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
 
-  // Initialize form with initialData or default values
+  // Initialize suggestions and default challan number (if create mode)
   useEffect(() => {
+    let isCancelled = false;
     const loadData = async () => {
-      setSuggestions(await getProductSuggestions());
-      setCustomerList(await getCustomerSuggestions());
-      setExistingChallans(await getChallans());
-      
-      if (initialData) {
-        setCustomer(initialData.customer || '');
-        setChallanNumber(initialData.challanNumber || '');
-        setDate(initialData.date || '');
-        setVehicleNumber(initialData.vehicleNumber || '');
-        setRemarks(initialData.remarks || '');
-        
-        const loadedProducts = (initialData.products || [{ name: '', quantity: '', rate: '', amount: 0 }]).map(p => ({
-          ...p,
-          unit: p.unit || 'nos'
-        }));
-        setProducts(loadedProducts);
-      } else {
-        // Create mode
-        setChallanNumber(await generateNextChallanNumber());
-        setDate(new Date().toISOString().split('T')[0]); // YYYY-MM-DD
+      try {
+        const [suggestionsData, custListData, existingData] = await Promise.all([
+          getProductSuggestions(),
+          getCustomerSuggestions(),
+          getChallans()
+        ]);
+        if (isCancelled) return;
+        setSuggestions(suggestionsData || []);
+        setCustomerList(custListData || []);
+        setExistingChallans(existingData || []);
+
+        if (initialData) {
+          // Sync state if initialData changed
+          setCustomer(initialData.customer || '');
+          setChallanNumber(initialData.challanNumber || '');
+          setDate(initialData.date || '');
+          setVehicleNumber(initialData.vehicleNumber || '');
+          setRemarks(initialData.remarks || '');
+          if (initialData.products?.length > 0) {
+            setProducts(initialData.products.map(p => ({ ...p, unit: p.unit || 'nos' })));
+          }
+        } else {
+          // Create mode
+          const nextNo = await generateNextChallanNumber();
+          if (isCancelled) return;
+          setChallanNumber(prev => prev || nextNo);
+          setDate(prev => prev || new Date().toISOString().split('T')[0]);
+        }
+      } catch (err) {
+        console.error("Error loading form dependencies:", err);
       }
     };
     loadData();
+    return () => {
+      isCancelled = true;
+    };
   }, [initialData]);
 
   // Update totals dynamically
@@ -79,10 +95,34 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
     const updated = [...products];
     const row = { ...updated[index] };
     
-    if (field === 'quantity' || field === 'rate') {
-      row[field] = value;
-      // Calculate row amount
-      row.amount = calculateRowAmount(row.quantity, row.rate);
+    if (field === 'amount') {
+      row.amount = value;
+      const qty = parseFloat(row.quantity);
+      const amt = parseFloat(value);
+      // If quantity is already provided and > 0, calculate rate = amount / quantity
+      if (!isNaN(qty) && qty > 0 && !isNaN(amt) && amt >= 0) {
+        row.rate = (amt / qty).toFixed(2);
+      }
+    } else if (field === 'quantity') {
+      row.quantity = value;
+      const qty = parseFloat(value);
+      const rt = parseFloat(row.rate);
+      const amt = parseFloat(row.amount);
+      if (!isNaN(qty) && qty > 0 && !isNaN(rt) && rt > 0) {
+        row.amount = calculateRowAmount(qty, rt);
+      } else if (!isNaN(qty) && qty > 0 && !isNaN(amt) && amt > 0 && (isNaN(rt) || rt === 0)) {
+        row.rate = (amt / qty).toFixed(2);
+      }
+    } else if (field === 'rate') {
+      row.rate = value;
+      const qty = parseFloat(row.quantity);
+      const rt = parseFloat(value);
+      if (!isNaN(qty) && qty > 0 && !isNaN(rt)) {
+        row.amount = calculateRowAmount(qty, rt);
+      } else if ((isNaN(qty) || qty === 0) && !isNaN(rt) && rt > 0) {
+        row.quantity = '1';
+        row.amount = calculateRowAmount(1, rt);
+      }
     } else {
       row[field] = value;
     }
@@ -98,7 +138,7 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
 
   // Add new product row
   const addProductRow = () => {
-    setProducts([...products, { name: '', quantity: '', unit: 'nos', rate: '', amount: 0 }]);
+    setProducts([...products, { name: '', quantity: '', unit: 'nos', rate: '', amount: '' }]);
   };
 
   // Delete product row
@@ -106,8 +146,8 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
     const updated = products.filter((_, i) => i !== index);
     // Keep at least one row
     if (updated.length === 0) {
-      setProducts([{ name: '', quantity: '', unit: 'nos', rate: '', amount: 0 }]);
-      if (touched) validateForm([{ name: '', quantity: '', unit: 'nos', rate: '', amount: 0 }], customer, challanNumber, date);
+      setProducts([{ name: '', quantity: '', unit: 'nos', rate: '', amount: '' }]);
+      if (touched) validateForm([{ name: '', quantity: '', unit: 'nos', rate: '', amount: '' }], customer, challanNumber, date);
     } else {
       setProducts(updated);
       if (touched) validateForm(updated, customer, challanNumber, date);
@@ -142,7 +182,9 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
     }
 
     // Filter out rows that are entirely empty before validating
-    const nonEmptyRows = prodList.filter(p => p.name.trim() || p.quantity || p.rate);
+    const nonEmptyRows = prodList.filter(p => 
+      p.name.trim() || p.quantity || p.rate || (p.amount !== '' && p.amount !== undefined && p.amount !== 0)
+    );
     
     if (nonEmptyRows.length === 0 && forceShowEmpty) {
       tempErrors.products = 'At least one product item is required';
@@ -151,20 +193,39 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
       prodList.forEach((prod, idx) => {
         const rowErrors = {};
         
-        // If the row has any input, it must be fully validated
-        if (prod.name.trim() || prod.quantity || prod.rate) {
+        // If the row has any input, it must be validated
+        const hasAnyInput = prod.name.trim() || prod.quantity || prod.rate || (prod.amount !== '' && prod.amount !== undefined);
+        if (hasAnyInput) {
           if (!prod.name.trim()) {
             rowErrors.name = 'Product name required';
           }
           
           const qty = parseFloat(prod.quantity);
-          if (isNaN(qty) || qty <= 0) {
-            rowErrors.quantity = 'Must be > 0';
+          const rate = parseFloat(prod.rate);
+          const amt = parseFloat(prod.amount);
+          
+          if (prod.quantity !== '' && prod.quantity !== undefined) {
+            if (isNaN(qty) || qty < 0) {
+              rowErrors.quantity = 'Must be ≥ 0';
+            }
           }
           
-          const rate = parseFloat(prod.rate);
-          if (isNaN(rate) || rate < 0) {
-            rowErrors.rate = 'Cannot be negative';
+          if (prod.rate !== '' && prod.rate !== undefined) {
+            if (isNaN(rate) || rate < 0) {
+              rowErrors.rate = 'Cannot be negative';
+            }
+          }
+
+          if (prod.amount !== '' && prod.amount !== undefined) {
+            if (isNaN(amt) || amt < 0) {
+              rowErrors.amount = 'Cannot be negative';
+            }
+          }
+
+          const hasValidAmt = !isNaN(amt) && amt >= 0 && prod.amount !== '' && prod.amount !== undefined;
+          const hasValidQtyRate = !isNaN(qty) && qty > 0 && !isNaN(rate) && rate >= 0;
+          if (!hasValidAmt && !hasValidQtyRate) {
+            rowErrors.amount = 'Enter Amount or Qty & Rate';
           }
         }
         
@@ -189,22 +250,34 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
     
     const isValid = validateForm(products, customer, challanNumber, date, true);
     if (!isValid) {
-      // Find first error and scroll to it
       alert("Please fix the validation errors in the form before saving.");
       return;
     }
 
-    // Filter empty rows
+    // Filter empty rows and clean product list
     const cleanedProducts = products
-      .filter(p => p.name.trim() && parseFloat(p.quantity) > 0 && parseFloat(p.rate) >= 0)
-      .map((p, idx) => ({
-        serialNumber: idx + 1,
-        name: p.name.trim(),
-        quantity: parseFloat(p.quantity),
-        unit: p.unit || 'nos',
-        rate: parseFloat(p.rate),
-        amount: parseFloat(p.amount)
-      }));
+      .filter(p => {
+        const hasName = p.name && p.name.trim().length > 0;
+        const hasAmt = p.amount !== '' && p.amount !== undefined && !isNaN(parseFloat(p.amount)) && parseFloat(p.amount) >= 0;
+        const hasQtyRate = parseFloat(p.quantity) > 0 && parseFloat(p.rate) >= 0;
+        return hasName && (hasAmt || hasQtyRate);
+      })
+      .map((p, idx) => {
+        const qty = parseFloat(p.quantity) || 0;
+        const rt = parseFloat(p.rate) || 0;
+        const amt = (p.amount !== '' && p.amount !== undefined && !isNaN(parseFloat(p.amount)))
+          ? parseFloat(p.amount)
+          : (qty * rt);
+
+        return {
+          serialNumber: idx + 1,
+          name: p.name.trim(),
+          quantity: qty,
+          unit: p.unit || 'nos',
+          rate: rt,
+          amount: parseFloat(amt)
+        };
+      });
 
     // Save newly entered product names to suggestions database
     cleanedProducts.forEach(p => {
@@ -237,7 +310,7 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
         <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
           <div>
             <h2 className="text-lg font-bold text-slate-800">
-              {initialData ? `Edit Challan: ${initialData.challanNumber}` : 'New Delivery Challan Details'}
+              {initialData ? `Edit Challan: ${initialData.challanNumber || challanNumber}` : 'New Delivery Challan Details'}
             </h2>
             <p className="text-xs text-slate-500">Fill in client information and items to generate challan</p>
           </div>
@@ -410,11 +483,11 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
                 <table className="w-full text-left border-collapse min-w-[700px]">
                   <thead>
                     <tr className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200">
-                      <th className="py-3 px-4 w-[6%] text-center">S.No</th>
-                      <th className="py-3 px-4 w-[50%]">Product Name</th>
-                      <th className="py-3 px-4 w-[12%] text-right">Quantity</th>
+                      <th className="py-3 px-4 w-[5%] text-center">S.No</th>
+                      <th className="py-3 px-4 w-[45%]">Product Name</th>
+                      <th className="py-3 px-4 w-[16%] text-right">Quantity</th>
                       <th className="py-3 px-4 w-[14%] text-right">Rate (₹)</th>
-                      <th className="py-3 px-4 w-[12%] text-right">Amount (₹)</th>
+                      <th className="py-3 px-4 w-[14%] text-right">Amount (₹)</th>
                       <th className="py-3 px-4 w-[6%] text-center">Action</th>
                     </tr>
                   </thead>
@@ -455,7 +528,7 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
                             <div className="flex items-center justify-end gap-1">
                               <input
                                 type="number"
-                                min="1"
+                                min="0"
                                 step="any"
                                 placeholder="0"
                                 value={prod.quantity}
@@ -470,6 +543,7 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
                                 className="text-xs font-medium px-1 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-600 outline-none"
                               >
                                 <option value="nos">nos</option>
+                                <option value="set">set</option>
                                 <option value="pcs">pcs</option>
                                 <option value="kgs">kgs</option>
                               </select>
@@ -498,8 +572,21 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
                           </td>
 
                           {/* Amount Column */}
-                          <td className="py-3 px-4 text-right text-sm font-semibold text-slate-700 font-mono">
-                            {parseFloat(prod.amount || 0).toFixed(2)}
+                          <td className="py-2.5 px-4 text-right">
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              placeholder="0.00"
+                              value={prod.amount !== undefined ? prod.amount : ''}
+                              onChange={(e) => handleProductChange(index, 'amount', e.target.value)}
+                              className={`w-28 text-right text-sm font-medium px-3 py-1.5 bg-slate-50 border ${
+                                rowError.amount ? 'border-red-500 bg-red-50/20' : 'border-slate-200'
+                              } rounded-lg font-mono focus:bg-white`}
+                            />
+                            {rowError.amount && (
+                              <p className="text-[10px] font-bold text-red-600 mt-0.5 text-right">{rowError.amount}</p>
+                            )}
                           </td>
 
                           {/* Delete row */}

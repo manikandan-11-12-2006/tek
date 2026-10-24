@@ -39,7 +39,12 @@ export const calculateTotals = (products = []) => {
     (acc, curr) => {
       const qty = parseFloat(curr.quantity) || 0;
       const rate = parseFloat(curr.rate) || 0;
-      const amount = qty * rate;
+      let amount = 0;
+      if (curr.amount !== undefined && curr.amount !== '' && !isNaN(parseFloat(curr.amount))) {
+        amount = parseFloat(curr.amount);
+      } else {
+        amount = qty * rate;
+      }
       
       acc.totalQuantity += qty;
       acc.totalAmount += amount;

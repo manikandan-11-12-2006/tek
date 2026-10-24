@@ -74,7 +74,10 @@ export const getChallans = async () => {
     const snapshot = await get(ref(database, 'challans'));
     if (snapshot.exists()) {
       const data = snapshot.val();
-      return Object.values(data);
+      return Object.entries(data).map(([key, val]) => ({
+        ...val,
+        id: val.id || key
+      }));
     }
     return [];
   } catch (error) {
@@ -84,10 +87,35 @@ export const getChallans = async () => {
 };
 
 export const getChallanById = async (id) => {
+  if (!id) return null;
   try {
+    // 1. Direct lookup by key
     const snapshot = await get(ref(database, `challans/${id}`));
     if (snapshot.exists()) {
-      return snapshot.val();
+      const data = snapshot.val();
+      return {
+        ...data,
+        id: data.id || id
+      };
+    }
+
+    // 2. Fallback: Search all challans by id or challanNumber
+    const allSnapshot = await get(ref(database, 'challans'));
+    if (allSnapshot.exists()) {
+      const allData = allSnapshot.val();
+      const normalizedSearch = String(id).trim().toLowerCase();
+      for (const [key, val] of Object.entries(allData)) {
+        if (!val) continue;
+        const keyMatch = key.toLowerCase() === normalizedSearch;
+        const idMatch = val.id && String(val.id).toLowerCase() === normalizedSearch;
+        const noMatch = val.challanNumber && val.challanNumber.toLowerCase() === normalizedSearch;
+        if (keyMatch || idMatch || noMatch) {
+          return {
+            ...val,
+            id: val.id || key
+          };
+        }
+      }
     }
     return null;
   } catch (error) {
@@ -133,14 +161,28 @@ export const createChallan = async (challan) => {
 };
 
 export const updateChallan = async (id, updatedData) => {
-  const challanRef = ref(database, `challans/${id}`);
-  const snapshot = await get(challanRef);
+  if (!id) return null;
+  let targetId = id;
+  let challanRef = ref(database, `challans/${targetId}`);
+  let snapshot = await get(challanRef);
+
+  // If not found by direct id, check if id is a challanNumber
+  if (!snapshot.exists()) {
+    const existing = await getChallanById(id);
+    if (existing && existing.id) {
+      targetId = existing.id;
+      challanRef = ref(database, `challans/${targetId}`);
+      snapshot = await get(challanRef);
+    }
+  }
+
   if (!snapshot.exists()) return null;
 
   const currentData = snapshot.val();
   const newData = {
     ...currentData,
     ...updatedData,
+    id: currentData.id || targetId,
     updatedAt: new Date().toISOString()
   };
 
@@ -152,13 +194,14 @@ export const updateChallan = async (id, updatedData) => {
 export const deleteChallan = async (id) => {
   const challan = await getChallanById(id);
   if (!challan) return false;
+  const targetId = challan.id || id;
 
   // Move to recycle bin
   const deletedAt = new Date().toISOString();
-  await set(ref(database, `recycle_bin/${id}`), { ...challan, deletedAt });
+  await set(ref(database, `recycle_bin/${targetId}`), { ...challan, id: targetId, deletedAt });
   
   // Remove from main challans
-  await remove(ref(database, `challans/${id}`));
+  await remove(ref(database, `challans/${targetId}`));
   return true;
 };
 
@@ -166,7 +209,11 @@ export const getRecycleBin = async () => {
   try {
     const snapshot = await get(ref(database, 'recycle_bin'));
     if (snapshot.exists()) {
-      return Object.values(snapshot.val());
+      const data = snapshot.val();
+      return Object.entries(data).map(([key, val]) => ({
+        ...val,
+        id: val.id || key
+      }));
     }
     return [];
   } catch (error) {
