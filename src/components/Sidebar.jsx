@@ -128,7 +128,7 @@ export default function Sidebar({
             className="flex items-center justify-center gap-2 w-full py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold rounded-lg text-xs transition-all shadow-md cursor-pointer"
           >
             <Zap size={14} className="fill-current" />
-            <span>₹500/Mo Subscription</span>
+            <span>₹1/Mo Subscription</span>
           </button>
         ) : null}
       </div>
