@@ -17,7 +17,7 @@ function razorpayDevServerPlugin(env) {
           req.on('end', async () => {
             try {
               const body = bodyStr ? JSON.parse(bodyStr) : {};
-              const amount = body.amount || 100;
+              const amount = body.amount || 50000;
               const keyId = env.VITE_RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID;
               const keySecret = env.RAZORPAY_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET;
 

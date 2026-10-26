@@ -57,7 +57,7 @@ export const recordSubscriptionPaid = async (paymentId) => {
     // Also keep payment history record in database
     await set(ref(database, `subscription/history/${monthKey}`), {
       paymentId,
-      amount: 1, // ₹1 for testing
+      amount: 500, // ₹500
       paidAt,
       month: monthKey
     });

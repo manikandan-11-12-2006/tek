@@ -29,8 +29,8 @@ export default function SubscriptionBanner({ onPay, onDismiss }) {
         <AlertTriangle size={17} className="shrink-0" />
         <span className="truncate">
           {isLastChance
-            ? `⚠️ Last day to renew! TekPower will be locked from tomorrow (3rd ${monthName} ${year}) until you pay ₹1.`
-            : `🔔 Subscription reminder: Please pay ₹1 for ${monthName} ${year}. Access will be locked from the 3rd.`
+            ? `⚠️ Last day to renew! TekPower will be locked from tomorrow (3rd ${monthName} ${year}) until you pay ₹500.`
+            : `🔔 Subscription reminder: Please pay ₹500 for ${monthName} ${year}. Access will be locked from the 3rd.`
           }
         </span>
       </div>

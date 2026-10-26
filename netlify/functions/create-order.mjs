@@ -15,8 +15,8 @@ export default async (req) => {
       body = {};
     }
 
-    // Default amount: 100 paise (₹1 for test) or 50000 (₹500)
-    const amount = body.amount || 100;
+    // Default amount: 50000 paise (₹500)
+    const amount = body.amount || 50000;
 
     const keyId = process.env.VITE_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID;
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
