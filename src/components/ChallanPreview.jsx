@@ -2,8 +2,9 @@ import React from 'react';
 import { formatCurrency, calculateTotals } from '../utils/calculations';
 import { defaultCompanyDetails } from '../data/sampleData';
 
-export default function ChallanPreview({ challan, companyDetails }) {
+export default function ChallanPreview({ challan, companyDetails, showSeal }) {
   const details = companyDetails || defaultCompanyDetails;
+  const includeSeal = showSeal !== undefined ? showSeal : (challan?.includeSeal !== false);
   
   if (!challan) {
     return (
@@ -209,12 +210,20 @@ export default function ChallanPreview({ challan, companyDetails }) {
                     </div>
                     
                     {/* Right signature */}
-                    <div className="w-1/2 text-right">
+                    <div className="w-1/2 text-right relative">
                       <span className="text-[9px] font-bold text-slate-600 block leading-none">For</span>
                       <span className="text-xs font-black text-[#d32f2f] uppercase leading-none block mt-1 tracking-wider">
                         {details.companyName}
                       </span>
-                      <div className="h-8 mt-2"></div>
+                      <div className="h-8 mt-2 relative">
+                        {includeSeal && (
+                          <img 
+                            src="/seal.png" 
+                            alt="Company Seal" 
+                            className="absolute -top-2.5 right-[135px] h-16 w-16 object-contain opacity-90 pointer-events-none select-none" 
+                          />
+                        )}
+                      </div>
                       <div className="text-[10px] font-extrabold text-slate-700 uppercase tracking-wider">
                         Authorised Signatory
                       </div>

@@ -17,8 +17,8 @@ function razorpayDevServerPlugin(env) {
           req.on('end', async () => {
             try {
               const body = bodyStr ? JSON.parse(bodyStr) : {};
-              const amount = body.amount || 100;
-              const keyId = env.VITE_RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID;
+              const amount = body.amount || 50000;
+              const keyId = env.VITE_RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || env.RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID;
               const keySecret = env.RAZORPAY_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET;
 
               if (!keyId || !keySecret) {
@@ -46,7 +46,7 @@ function razorpayDevServerPlugin(env) {
               const order = await rzpRes.json();
               res.setHeader('Content-Type', 'application/json');
               res.statusCode = rzpRes.status;
-              res.end(JSON.stringify(order));
+              res.end(JSON.stringify({ ...order, keyId }));
             } catch (err) {
               res.setHeader('Content-Type', 'application/json');
               res.statusCode = 500;

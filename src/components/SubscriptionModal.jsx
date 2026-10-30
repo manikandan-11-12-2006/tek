@@ -39,23 +39,22 @@ export default function SubscriptionModal({
       return;
     }
 
-    const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_YOUR_KEY_ID";
-    if (!import.meta.env.VITE_RAZORPAY_KEY_ID) {
-      console.warn("VITE_RAZORPAY_KEY_ID is not defined in .env, using placeholder.");
-    }
-
     // 1. Create Razorpay Order via backend/Netlify API to ensure automatic capture
     let orderId = null;
+    let serverKeyId = null;
     try {
       const orderRes = await fetch("/api/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: 100 }) // ₹1 for test (or 50000 for ₹500)
+        body: JSON.stringify({ amount: 50000 }) // ₹500 = 50000 paise
       });
       if (orderRes.ok) {
         const orderData = await orderRes.json();
         if (orderData && orderData.id) {
           orderId = orderData.id;
+        }
+        if (orderData && orderData.keyId) {
+          serverKeyId = orderData.keyId;
         }
       } else {
         console.warn("Order creation response not OK, proceeding with direct checkout.");
@@ -64,13 +63,20 @@ export default function SubscriptionModal({
       console.warn("Could not connect to /api/create-order:", orderErr);
     }
 
-    // Amount: ₹1 for testing = 100 paise
+    const keyId = serverKeyId || import.meta.env.VITE_RAZORPAY_KEY_ID || "";
+    if (!keyId) {
+      alert("Razorpay Key ID not available. Please check environment configuration.");
+      setLoading(false);
+      return;
+    }
+
+    // Amount: ₹500 (Inclusive 18% GST) = 50000 paise
     const options = {
       key: keyId,
-      amount: 100, // ₹1 (100 paise)
+      amount: 50000,
       currency: "INR",
       name: "TekPower",
-      description: "Monthly Access Subscription (Test ₹1)",
+      description: "Monthly Access Subscription",
       order_id: orderId || undefined, // Binds to Order for 100% Auto-Capture!
       payment_capture: 1,
       handler: async function (response) {
@@ -196,7 +202,7 @@ export default function SubscriptionModal({
                 : 'bg-slate-50 border-slate-200'
           }`}>
             <div className="text-3xl font-extrabold text-slate-900">
-              ₹1 <span className="text-sm font-normal text-slate-500">/ month (Testing)</span>
+              ₹500 <span className="text-sm font-normal text-slate-500">/ month</span>
             </div>
             {isPaid ? (
               <div className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
@@ -204,7 +210,7 @@ export default function SubscriptionModal({
                 Paid for {monthName} {year}
               </div>
             ) : (
-              <div className="text-xs text-slate-500 mt-1">Test Mode (₹1) • Includes GST • Razorpay</div>
+              <div className="text-xs text-slate-500 mt-1">Includes 18% GST • Tax Invoice via Razorpay</div>
             )}
           </div>
 
@@ -258,7 +264,7 @@ export default function SubscriptionModal({
               }`}
             >
               <ShieldCheck size={18} />
-              {loading ? "Initializing Payment..." : `Pay ₹1 for ${monthName} ${year}`}
+              {loading ? "Initializing Payment..." : `Pay ₹500 for ${monthName} ${year}`}
             </button>
           )}
 

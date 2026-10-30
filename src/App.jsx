@@ -29,7 +29,8 @@ import { checkLogin, logout, getUserRole } from './utils/auth';
 import { 
   getSubscriptionStatus, 
   syncSubscriptionFromDatabase, 
-  listenToSubscription 
+  listenToSubscription,
+  isSubscriptionPaidThisMonth
 } from './utils/razorpay';
 
 // Route Guard component
@@ -55,6 +56,8 @@ export default function App() {
   // Subscription state
   // status: "active" | "warning" | "blocked"
   const [subStatus, setSubStatus] = useState(() => getSubscriptionStatus());
+  // Prevent flashing "Access Suspended" on initial startup before Firebase sync finishes
+  const [isSubChecking, setIsSubChecking] = useState(() => !isSubscriptionPaidThisMonth());
   const [isSubModalOpen, setIsSubModalOpen] = useState(false);
   const [isBannerDismissed, setIsBannerDismissed] = useState(false);
 
@@ -73,12 +76,14 @@ export default function App() {
 
   // Sync and listen to subscription status from Firebase Realtime Database
   useEffect(() => {
-    syncSubscriptionFromDatabase().then(() => {
+    syncSubscriptionFromDatabase().finally(() => {
       setSubStatus(getSubscriptionStatus());
+      setIsSubChecking(false);
     });
 
     const unsubscribe = listenToSubscription((newStatus) => {
       setSubStatus(newStatus);
+      setIsSubChecking(false);
     });
 
     return () => {
@@ -125,8 +130,11 @@ export default function App() {
   };
 
   // Direct Print Trigger
-  const triggerDirectPrint = (challan) => {
-    setPrintingChallan(challan);
+  const triggerDirectPrint = (challan, options = {}) => {
+    const challanToPrint = options.includeSeal !== undefined 
+      ? { ...challan, includeSeal: options.includeSeal } 
+      : challan;
+    setPrintingChallan(challanToPrint);
     setTimeout(() => {
       window.print();
       setPrintingChallan(null);
@@ -134,10 +142,10 @@ export default function App() {
   };
 
   // Direct PDF Download Trigger
-  const triggerPdfDownload = async (challan) => {
+  const triggerPdfDownload = async (challan, options = {}) => {
     setIsPdfProcessing(true);
     try {
-      await downloadChallanPDF(challan, companyDetails);
+      await downloadChallanPDF(challan, companyDetails, options);
     } catch (error) {
       console.error("PDF Download failed:", error);
       alert("An error occurred while generating the PDF. Please try again.");
@@ -161,14 +169,15 @@ export default function App() {
   // Called after successful payment — refresh subscription status
   const handleSubscriptionSuccess = useCallback((paymentId) => {
     setSubStatus(getSubscriptionStatus());
+    setIsSubChecking(false);
     setIsSubModalOpen(false);
     setIsBannerDismissed(false);
   }, []);
 
   // Show banner when status is "warning" and not manually dismissed
-  const showBanner = subStatus === "warning" && !isBannerDismissed;
-  // Show hard-block modal when status is "blocked"
-  const showBlockModal = subStatus === "blocked";
+  const showBanner = !isSubChecking && subStatus === "warning" && !isBannerDismissed;
+  // Show hard-block modal when status is "blocked" AND initial check is finished
+  const showBlockModal = !isSubChecking && subStatus === "blocked";
   const isPaidThisMonth = subStatus === "active";
 
   return (

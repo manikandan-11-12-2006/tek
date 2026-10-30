@@ -53,8 +53,13 @@ const formatPdfCurrency = (amount) => {
  * @param {Object} challan - Challan details object
  * @param {Object} companyDetails - Company letterhead profile
  */
-export const downloadChallanPDF = async (challan, companyDetails) => {
+export const downloadChallanPDF = async (challan, companyDetails, options = {}) => {
   if (!challan) return Promise.reject(new Error("Challan data missing"));
+
+  // Check if seal should be included
+  const includeSeal = options?.includeSeal !== undefined 
+    ? options.includeSeal 
+    : (challan.includeSeal !== false);
 
   const details = companyDetails || {
     companyName: "TEKPOWER ENERGY SOLUTIONS",
@@ -71,8 +76,9 @@ export const downloadChallanPDF = async (challan, companyDetails) => {
     format: 'a4'
   });
 
-  // Load logo image
+  // Load logo and seal images
   const logoBase64 = await getBase64ImageFromUrl('/logo.png');
+  const sealBase64 = await getBase64ImageFromUrl('/seal.png');
 
   // --- Page Setup ---
   // A4 size: 210mm x 297mm. Margin: 10mm. Printable Width: 190mm
@@ -401,6 +407,11 @@ export const downloadChallanPDF = async (challan, companyDetails) => {
       pdf.setFontSize(9);
       pdf.setTextColor(211, 47, 47);
       pdf.text(details.companyName, 200, footerY + 3.2, { align: 'right' });
+      
+      // Company Seal Stamp (bottom of TEKPOWER, left of Authorised Signatory, without touching words)
+      if (includeSeal && sealBase64) {
+        pdf.addImage(sealBase64, 'PNG', 150, footerY + 4.8, 20, 20);
+      }
       
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(8.5);

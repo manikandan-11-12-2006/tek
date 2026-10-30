@@ -9,7 +9,8 @@ import {
   ArrowLeft,
   Loader2,
   Ban,
-  RotateCcw
+  RotateCcw,
+  Stamp
 } from 'lucide-react';
 import { getChallanById, deleteChallan, duplicateChallan, updateChallan } from '../utils/storage';
 import ChallanPreview from '../components/ChallanPreview';
@@ -22,6 +23,7 @@ export default function ChallanDetails({ companyDetails, triggerDirectPrint, tri
   const [loading, setLoading] = useState(true);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [includeSeal, setIncludeSeal] = useState(true);
 
   useEffect(() => {
     const fetchChallan = async () => {
@@ -29,6 +31,7 @@ export default function ChallanDetails({ companyDetails, triggerDirectPrint, tri
       const data = await getChallanById(id);
       if (data) {
         setChallan(data);
+        setIncludeSeal(data.includeSeal !== false);
       } else {
         alert("Challan not found!");
         navigate('/challans');
@@ -72,6 +75,19 @@ export default function ChallanDetails({ companyDetails, triggerDirectPrint, tri
     const updated = await updateChallan(challanId, { status: 'Active' });
     if (updated) {
       setChallan(updated);
+    }
+  };
+
+  const handleToggleSeal = async () => {
+    const nextState = !includeSeal;
+    setIncludeSeal(nextState);
+    if (challanId) {
+      try {
+        await updateChallan(challanId, { includeSeal: nextState });
+        setChallan(prev => prev ? { ...prev, includeSeal: nextState } : prev);
+      } catch (err) {
+        console.error("Failed to update seal setting:", err);
+      }
     }
   };
 
@@ -175,8 +191,23 @@ export default function ChallanDetails({ companyDetails, triggerDirectPrint, tri
 
           <div className="h-6 w-px bg-slate-200 mx-1"></div>
 
+          {/* Toggle Seal Button */}
           <button
-            onClick={() => triggerPdfDownload(challan)}
+            type="button"
+            onClick={handleToggleSeal}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all border cursor-pointer ${
+              includeSeal 
+                ? 'bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100 shadow-xs' 
+                : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'
+            }`}
+            title={includeSeal ? "Company seal is ON. Click to remove seal from this bill." : "Company seal is OFF. Click to attach seal to this bill."}
+          >
+            <Stamp size={14} className={includeSeal ? "text-blue-700" : "text-slate-400"} />
+            <span>Seal: {includeSeal ? "Included" : "None"}</span>
+          </button>
+
+          <button
+            onClick={() => triggerPdfDownload(challan, { includeSeal })}
             className="flex items-center gap-1.5 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold shadow-sm transition-colors cursor-pointer"
           >
             <Download size={14} />
@@ -184,7 +215,7 @@ export default function ChallanDetails({ companyDetails, triggerDirectPrint, tri
           </button>
 
           <button
-            onClick={() => triggerDirectPrint(challan)}
+            onClick={() => triggerDirectPrint(challan, { includeSeal })}
             className="flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold shadow-sm transition-colors cursor-pointer"
           >
             <Printer size={14} />
@@ -196,7 +227,7 @@ export default function ChallanDetails({ companyDetails, triggerDirectPrint, tri
       {/* Centered A4 Page Sheet */}
       <div className="flex justify-center p-4 bg-slate-100/50 rounded-2xl border border-dashed border-slate-300 overflow-x-auto min-h-[310mm] print:p-0 print:border-none print:bg-white">
         <div className="shadow-2xl shadow-slate-900/10 origin-top scale-95 md:scale-100">
-          <ChallanPreview challan={challan} companyDetails={companyDetails} />
+          <ChallanPreview challan={challan} companyDetails={companyDetails} showSeal={includeSeal} />
         </div>
       </div>
 

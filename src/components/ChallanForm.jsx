@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Trash2, Plus, ArrowLeft, Save, Printer } from 'lucide-react';
+import { Trash2, Plus, ArrowLeft, Save, Printer, Stamp } from 'lucide-react';
 import { formatCurrency, calculateRowAmount, calculateTotals } from '../utils/calculations';
 import { 
   generateNextChallanNumber, 
@@ -16,6 +16,9 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
   const [date, setDate] = useState(initialData?.date || '');
   const [vehicleNumber, setVehicleNumber] = useState(initialData?.vehicleNumber || '');
   const [remarks, setRemarks] = useState(initialData?.remarks || '');
+  const [includeSeal, setIncludeSeal] = useState(
+    initialData?.includeSeal !== undefined ? initialData.includeSeal : true
+  );
   const [products, setProducts] = useState(
     initialData?.products?.length > 0
       ? initialData.products.map(p => ({ ...p, unit: p.unit || 'nos' }))
@@ -62,6 +65,7 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
           setDate(initialData.date || '');
           setVehicleNumber(initialData.vehicleNumber || '');
           setRemarks(initialData.remarks || '');
+          setIncludeSeal(initialData.includeSeal !== undefined ? initialData.includeSeal : true);
           if (initialData.products?.length > 0) {
             setProducts(initialData.products.map(p => ({ ...p, unit: p.unit || 'nos' })));
           }
@@ -298,6 +302,7 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
       products: cleanedProducts,
       totalQuantity,
       totalAmount,
+      includeSeal,
     };
 
     onSave(finalChallan, printAfterSave);
@@ -647,6 +652,36 @@ export default function ChallanForm({ initialData, onSave, onCancel }) {
               onChange={(e) => setRemarks(e.target.value)}
               className="w-full text-sm font-medium px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg resize-y focus:bg-white"
             ></textarea>
+          </div>
+
+          <hr className="border-slate-100" />
+
+          {/* Section 4: Company Seal & Stamp Option */}
+          <div className="p-4 bg-slate-50/70 rounded-xl border border-slate-200 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-lg ${includeSeal ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-500'}`}>
+                <Stamp size={18} />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-slate-800">Company Seal & Stamp</div>
+                <div className="text-[11px] text-slate-500">Attach official TEKPOWER seal to this bill</div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIncludeSeal(!includeSeal)}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                includeSeal ? 'bg-blue-600' : 'bg-slate-300'
+              }`}
+              role="switch"
+              aria-checked={includeSeal}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                  includeSeal ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
           </div>
         </div>
 
