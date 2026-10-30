@@ -410,7 +410,7 @@ export const downloadChallanPDF = async (challan, companyDetails, options = {}) 
       
       // Company Seal Stamp (bottom of TEKPOWER, left of Authorised Signatory, without touching words)
       if (includeSeal && sealBase64) {
-        pdf.addImage(sealBase64, 'PNG', 150, footerY + 4.8, 20, 20);
+        pdf.addImage(sealBase64, 'PNG', 150, footerY + 4.8, 17.5, 17.5);
       }
       
       pdf.setFont("helvetica", "bold");
